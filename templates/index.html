@@ -165,11 +165,11 @@
                     <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
                     <textarea name="text" data-editor>{{ current_record.text_content }}</textarea>
                     <div class="form-actions">
-                        <button type="submit" data-submit-kind="save">💾 Sauvegarder</button>
-                        <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ Valider & Suivant</button>
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 Paddle OCR</button>
                         {% endif %}
+                        <button type="submit" data-submit-kind="save">💾 Sauvegarder</button>
+                        <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ Valider & Suivant</button>
                     </div>
                 </form>
             </div>

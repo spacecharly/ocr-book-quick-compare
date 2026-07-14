@@ -224,7 +224,10 @@ def save_uploaded_images(files: list, images_dir: Path, auto_ocr: bool = False, 
 
         storage.save(str(destination))
         created_count += 1
-        created_images.append((destination, text_path_for(destination)))
+        text_path = text_path_for(destination)
+        # Always create the paired text file when importing via UI.
+        text_path.write_text("", encoding="utf-8")
+        created_images.append((destination, text_path))
 
     if auto_ocr and created_images:
         for image_path, text_path in created_images:

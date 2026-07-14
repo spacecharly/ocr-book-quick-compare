@@ -191,6 +191,22 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("1 image(s) importée(s).", page_html)
         self.assertIn("2 fichier(s) ignoré(s)", page_html)
 
+    def test_upload_images_creates_paired_text_file_automatically(self) -> None:
+        response = self.client.post(
+            "/upload-images",
+            data={
+                "images": [
+                    (io.BytesIO(b"new-jpg"), "auto-pair.jpg"),
+                ]
+            },
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue((self.images_dir / "auto-pair.jpg").exists())
+        self.assertTrue((self.images_dir / "auto-pair.txt").exists())
+
     def test_run_ocr_updates_text_file(self) -> None:
         image_path = self.create_image("page-ocr.jpg", 100)
         text_path = image_path.with_suffix(".txt")

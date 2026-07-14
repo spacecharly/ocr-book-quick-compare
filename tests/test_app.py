@@ -76,6 +76,17 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertNotIn("beta-page.jpg", page_html)
         self.assertIn("résultats filtrés", page_html)
 
+    def test_language_switcher_renders_english_labels(self) -> None:
+        image_path = self.create_image("page-lang.jpg", 100)
+        image_path.with_suffix(".txt").write_text("text", encoding="utf-8")
+
+        response = self.client.get("/?lang=en")
+        page_html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Total pages", page_html)
+        self.assertIn("Validated", page_html)
+
     def test_save_updates_selected_text_file(self) -> None:
         image_path = self.create_image("page-save.jpg", 100)
         text_path = image_path.with_suffix(".txt")
@@ -167,6 +178,30 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(moved_text, "saved before move")
         self.assertTrue(second_text.exists())
         self.assertIn("page-b.jpg", response.get_data(as_text=True))
+
+    def test_undo_validation_reports_conflict_when_name_already_exists(self) -> None:
+        image_path = self.create_image("page-conflict.jpg", 100)
+        text_path = image_path.with_suffix(".txt")
+        text_path.write_text("draft", encoding="utf-8")
+
+        self.client.post(
+            "/validate",
+            data={"current_image": "page-conflict.jpg", "sort": "oldest", "text_filter": "all", "q": ""},
+            follow_redirects=True,
+        )
+
+        # Recreate conflicting active pair, so undo cannot restore.
+        self.create_image("page-conflict.jpg", 200)
+        (self.images_dir / "page-conflict.txt").write_text("existing", encoding="utf-8")
+
+        response = self.client.post(
+            "/undo-validation",
+            data={"sort": "oldest", "text_filter": "all", "q": "", "lang": "en"},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Undo blocked", response.get_data(as_text=True))
 
     def test_upload_images_skips_duplicates_and_invalid_extensions(self) -> None:
         self.create_image("existing.jpg", 100)

@@ -34,6 +34,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const filenameInput = document.querySelector("[data-filename-input]");
     const renameForm = document.querySelector("[data-rename-form]");
     const renameBaseInput = document.querySelector("[data-rename-base]");
+    const viewLangInput = saveForm?.querySelector('[name="lang"]');
+    const viewOcrLangInput = saveForm?.querySelector('[name="ocr_lang"]');
+
+    const bodyDataset = document.body?.dataset || {};
+    const i18n = {
+        autosaveSaving: bodyDataset.i18nAutosaveSaving || "Autosave en cours...",
+        autosavedAt: bodyDataset.i18nAutosavedAt || "Autosaved at",
+        autosaveFailed: bodyDataset.i18nAutosaveFailed || "Autosave failed",
+        dirty: bodyDataset.i18nDirty || "Unsaved changes",
+        saveSaving: bodyDataset.i18nSaveSaving || "Saving...",
+        confirmValidateNext: bodyDataset.i18nConfirmValidateNext || "Validate this page and move to the next one?",
+        confirmValidateNextDirty:
+            bodyDataset.i18nConfirmValidateNextDirty ||
+            "Save current text, validate this page and move to the next one?",
+        confirmOcrOverwrite:
+            bodyDataset.i18nConfirmOcrOverwrite ||
+            "Displayed text was edited. Running OCR will replace current content. Continue?",
+        uploadReadyTemplate:
+            bodyDataset.i18nUploadReady || "__COUNT__ file(s) ready. Drop more files or release to import.",
+        dropzoneHint: bodyDataset.i18nDropzoneHint || 'Drop .jpg/.jpeg here or click to select.',
+    };
 
     let autosaveTimer = null;
     let isDirty = false;
@@ -121,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        setSaveState("is-saving", "Autosave en cours…");
+        setSaveState("is-saving", i18n.autosaveSaving);
 
         try {
             const response = await fetch(saveForm.dataset.autosaveUrl, {
@@ -135,6 +156,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     q: viewQueryInput?.value || "",
                     sort: viewSortInput?.value || "oldest",
                     text_filter: viewTextFilterInput?.value || "all",
+                    lang: viewLangInput?.value || "fr",
+                    ocr_lang: viewOcrLangInput?.value || "",
                 }),
             });
 
@@ -144,9 +167,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const payload = await response.json();
             isDirty = false;
-            setSaveState("is-saved", `Autosaved at ${payload.timestamp}`);
+            setSaveState("is-saved", `${i18n.autosavedAt} ${payload.timestamp}`);
         } catch (error) {
-            setSaveState("is-error", "Autosave failed");
+            setSaveState("is-error", i18n.autosaveFailed);
         }
     };
 
@@ -163,7 +186,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (editor) {
         editor.addEventListener("input", () => {
             isDirty = true;
-            setSaveState("is-dirty", "Texte modifié non sauvegardé");
+            setSaveState("is-dirty", i18n.dirty);
             scheduleAutosave();
         });
     }
@@ -193,8 +216,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (submitKind === "validate-next") {
                 const message = isDirty
-                    ? "Sauvegarder le texte courant, valider cette page et passer à la suivante ?"
-                    : "Valider cette page et passer à la suivante ?";
+                    ? i18n.confirmValidateNextDirty
+                    : i18n.confirmValidateNext;
                 if (!window.confirm(message)) {
                     event.preventDefault();
                     return;
@@ -203,7 +226,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (submitKind === "ocr" && isDirty) {
                 const confirmed = window.confirm(
-                    "Le texte affiché a été modifié. Lancer l'OCR va remplacer le contenu actuel. Continuer ?"
+                    i18n.confirmOcrOverwrite
                 );
                 if (!confirmed) {
                     event.preventDefault();
@@ -212,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (submitKind === "save") {
-                setSaveState("is-saving", "Sauvegarde…");
+                setSaveState("is-saving", i18n.saveSaving);
             }
 
             isDirty = false;
@@ -258,9 +281,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             if (count > 0) {
-                uploadLabel.textContent = `${count} file(s) ready. Drop more or submit to import.`;
+                uploadLabel.textContent = i18n.uploadReadyTemplate.replace("__COUNT__", String(count));
             } else {
-                uploadLabel.innerHTML = 'Glisser-déposer des <code>.jpg</code>/<code>.jpeg</code> ici ou cliquer pour sélectionner.';
+                uploadLabel.textContent = i18n.dropzoneHint;
             }
         };
 

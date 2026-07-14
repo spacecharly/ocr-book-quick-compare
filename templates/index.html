@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>OCR Book Quick Compare v4</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="page">
+    <header class="topbar">
+        <div class="title-block">
+            <h1>OCR Book Quick Compare</h1>
+            <p class="subtitle">v4 - Correction mise en page</p>
+        </div>
+        <div class="toolbar">
+            <form class="upload-form" action="{{ url_for('upload_images') }}" method="post" enctype="multipart/form-data" data-upload-form>
+                <div class="upload-dropzone" data-upload-dropzone>
+                    <strong>Déposer images ici</strong>
+                    <span data-upload-label>ou cliquer pour sélectionner</span>
+                    <input type="file" name="images" accept=".jpg,.jpeg" multiple class="visually-hidden" data-upload-input>
+                </div>
+                <div class="actions">
+                    <button type="submit">Importer</button>
+                    <label><input type="checkbox" name="auto_ocr" value="1"> OCR auto</label>
+                </div>
+            </form>
+            <div class="actions">
+                <form action="{{ url_for('create_texts') }}" method="post">
+                    <button type="submit" class="secondary">Créer .txt</button>
+                </form>
+                <a href="{{ url_for('export_texts') }}" class="button-link">Export</a>
+                {% if done_count > 0 %}
+                <form action="{{ url_for('undo_validation') }}" method="post">
+                    <button type="submit" class="secondary">Undo ({{ done_count }})</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-list">
+                {% for category, message in messages %}
+                    <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="status-cards">
+        <article>
+            <strong>{{ total_page_count }}</strong>
+            <span>Pages au total</span>
+        </article>
+        <article>
+            <strong>{{ done_count }}</strong>
+            <span>Validées</span>
+        </article>
+        <article>
+            <strong>{{ progress_percent }}%</strong>
+            <span>Progression</span>
+        </article>
+        <article>
+            <strong>{{ pending_count }}</strong>
+            <span>À traiter</span>
+        </article>
+    </div>
+
+    <div class="progress-panel">
+        <div class="progress-header">
+            <div>
+                <h2>Progression</h2>
+                <p class="muted">{{ current_position }} / {{ ready_total_count }}</p>
+            </div>
+            <span class="current-position">{{ progress_percent }}%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ progress_percent }}%"></div>
+        </div>
+    </div>
+
+    {% if current_record %}
+        <div class="work-area">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Image</h2>
+                        <span class="muted">{{ current_record.image_name }}</span>
+                    </div>
+                    <div class="navigation-controls">
+                        {% if prev_name %}
+                            <a href="{{ url_for('index', file=prev_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page) }}" class="button-link">← Précédent</a>
+                        {% endif %}
+                        {% if next_name %}
+                            <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page) }}" class="button-link">Suivant →</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="zoom-controls">
+                    <button data-zoom-action="out">−</button>
+                    <input type="range" min="0.5" max="3" step="0.1" value="1" data-zoom-range>
+                    <button data-zoom-action="in">+</button>
+                    <button data-rotate-action="ccw">↺</button>
+                    <button data-rotate-action="cw">↻</button>
+                </div>
+
+                <div class="image-wrapper">
+                    <img src="{{ url_for('page_image', filename=current_record.image_name) }}" alt="{{ current_record.image_name }}" data-zoom-image data-rotate-image>
+                </div>
+
+                <div class="thumbnail-panel">
+                    <div class="thumbnail-panel-header">
+                        <h3>Miniatures</h3>
+                        <p class="muted">Page {{ thumbnail_page }} / {{ total_thumbnail_pages }}</p>
+                    </div>
+                    {% if paginated_records %}
+                        <div class="thumbnail-grid">
+                            {% for r in paginated_records %}
+                            <a href="{{ url_for('index', file=r.image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page) }}" class="thumbnail-card {% if r.image_name == current_image_name %}active{% endif %}">
+                                <img src="{{ url_for('page_image', filename=r.image_name) }}" alt="{{ r.image_name }}">
+                                <div class="thumbnail-meta">
+                                    <span>{{ r.image_name }}</span>
+                                    {% if r.text_is_empty %}<em>Vide</em>{% else %}<em>{{ r.text_length }} char</em>{% endif %}
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% if total_thumbnail_pages > 1 %}
+                        <div style="text-align: center; margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
+                            {% if thumbnail_page > 1 %}
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page-1) }}" class="button-link">← Page précédente</a>
+                            {% endif %}
+                            {% if thumbnail_page < total_thumbnail_pages %}
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page+1) }}" class="button-link">Page suivante →</a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>Texte OCR</h2>
+                </div>
+                <form class="text-form" action="{{ url_for('save_text') }}" method="post" data-autosave-url="{{ url_for('autosave_text') }}" data-autosave-interval="1500">
+                    <input type="hidden" name="current_image" value="{{ current_image_name }}" data-current-image>
+                    <input type="hidden" name="sort" value="{{ view_state.sort_key }}">
+                    <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}">
+                    <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
+                    <textarea name="text" data-editor>{{ current_record.text_content }}</textarea>
+                    <div class="form-actions">
+                        <button type="submit" data-submit-kind="save">💾 Sauvegarder</button>
+                        <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ Valider & Suivant</button>
+                        {% if ocr_available %}
+                            <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 Paddle OCR</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <h2>Aucune page disponible</h2>
+            <p class="muted">Commence par importer des images avec le formulaire ci-dessus.</p>
+        </div>
+    {% endif %}
+</div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

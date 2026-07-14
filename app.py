@@ -272,6 +272,30 @@ def undo_last_validation(check_done_dir: Path, images_dir: Path, count: int = 1)
     return undone_count
 
 
+def rename_pair(image_path: Path, new_base: str) -> tuple[Path, Path]:
+    cleaned_base = new_base.strip()
+    if not cleaned_base:
+        raise ValueError("Le nom ne peut pas être vide.")
+    if Path(cleaned_base).name != cleaned_base or "/" in cleaned_base or "\\" in cleaned_base:
+        raise ValueError("Le nom contient des caractères non autorisés.")
+
+    current_text_path = text_path_for(image_path)
+    target_image_path = image_path.with_name(f"{cleaned_base}{image_path.suffix}")
+    target_text_path = image_path.with_name(f"{cleaned_base}.txt")
+
+    if target_image_path == image_path:
+        return image_path, current_text_path
+
+    if target_image_path.exists() or target_text_path.exists():
+        raise FileExistsError("Un fichier avec ce nom existe déjà.")
+
+    image_path.rename(target_image_path)
+    if current_text_path.exists():
+        current_text_path.rename(target_text_path)
+
+    return target_image_path, target_text_path
+
+
 
 def export_all_texts(images_dir: Path, check_done_dir: Path) -> bytes:
     zip_buffer = __import__("io").BytesIO()
@@ -488,6 +512,25 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         flash(f"Texte mis à jour pour {current_record.text_name}.", "success")
         return redirect_to_index(view_state, current_record.image_name)
 
+    @app.post("/rename-current")
+    def rename_current():
+        view_state = build_view_state(request.form)
+        _, filtered_records, _ = get_filtered_context(view_state)
+        current_record, _ = get_selected_record(filtered_records, view_state.selected_name)
+        if not current_record:
+            flash("Aucune page à renommer.", "info")
+            return redirect(url_for("index"))
+
+        new_base = request.form.get("new_base", "")
+        try:
+            target_image, _ = rename_pair(current_record.image_path, new_base)
+        except (ValueError, FileExistsError) as exc:
+            flash(str(exc), "error")
+            return redirect_to_index(view_state, current_record.image_name)
+
+        flash(f"Fichier renommé: {target_image.name}", "success")
+        return redirect_to_index(view_state, target_image.name)
+
     @app.post("/autosave")
     def autosave_text():
         payload = request.get_json(silent=True) or {}
@@ -606,6 +649,8 @@ app = create_app()
 
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=5000)
+
+
 
 
 

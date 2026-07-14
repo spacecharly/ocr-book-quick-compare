@@ -86,8 +86,20 @@
             <div class="panel">
                 <div class="panel-header">
                     <div>
+                        {% set image_parts = current_record.image_name.rsplit('.', 1) %}
+                        {% set image_base = image_parts[0] %}
+                        {% set image_ext = '.' ~ image_parts[1] if image_parts|length > 1 else '' %}
                         <h2>Image</h2>
-                        <span class="muted">{{ current_record.image_name }}</span>
+                        <span class="muted" data-filename-display title="Cliquer pour renommer">{{ image_base }}</span><span class="muted">{{ image_ext }}</span>
+                        <input class="muted" type="text" value="{{ image_base }}" data-filename-input style="display: none; width: min(480px, 100%);">
+                        <form action="{{ url_for('rename_current') }}" method="post" data-rename-form>
+                            <input type="hidden" name="current_image" value="{{ current_image_name }}">
+                            <input type="hidden" name="sort" value="{{ view_state.sort_key }}">
+                            <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}">
+                            <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
+                            <input type="hidden" name="q" value="{{ view_state.query }}">
+                            <input type="hidden" name="new_base" value="" data-rename-base>
+                        </form>
                     </div>
                     <div class="navigation-controls">
                         {% if prev_name %}

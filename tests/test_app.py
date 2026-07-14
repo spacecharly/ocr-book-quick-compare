@@ -234,8 +234,43 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("Paddle OCR exécuté pour page-paddle.jpg.", response.get_data(as_text=True))
         self.assertEqual(image_path.with_suffix(".txt").read_text(encoding="utf-8"), "texte paddle")
 
+    def test_rename_current_renames_image_and_text_pair(self) -> None:
+        image_path = self.create_image("old-name.jpg", 100)
+        text_path = image_path.with_suffix(".txt")
+        text_path.write_text("texte", encoding="utf-8")
+
+        response = self.client.post(
+            "/rename-current",
+            data={"current_image": "old-name.jpg", "new_base": "new-name", "sort": "oldest", "text_filter": "all", "q": ""},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse((self.images_dir / "old-name.jpg").exists())
+        self.assertFalse((self.images_dir / "old-name.txt").exists())
+        self.assertTrue((self.images_dir / "new-name.jpg").exists())
+        self.assertTrue((self.images_dir / "new-name.txt").exists())
+        self.assertIn("Fichier renommé: new-name.jpg", response.get_data(as_text=True))
+
+    def test_rename_current_rejects_existing_target(self) -> None:
+        self.create_image("exists.jpg", 90).with_suffix(".txt").write_text("x", encoding="utf-8")
+        image_path = self.create_image("rename-me.jpg", 100)
+        image_path.with_suffix(".txt").write_text("texte", encoding="utf-8")
+
+        response = self.client.post(
+            "/rename-current",
+            data={"current_image": "rename-me.jpg", "new_base": "exists", "sort": "oldest", "text_filter": "all", "q": ""},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue((self.images_dir / "rename-me.jpg").exists())
+        self.assertTrue((self.images_dir / "rename-me.txt").exists())
+        self.assertIn("Un fichier avec ce nom existe déjà.", response.get_data(as_text=True))
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

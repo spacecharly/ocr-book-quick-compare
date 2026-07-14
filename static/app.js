@@ -30,6 +30,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const viewQueryInput = document.querySelector("[data-view-query]");
     const viewSortInput = document.querySelector("[data-view-sort]");
     const viewTextFilterInput = document.querySelector("[data-view-text-filter]");
+    const filenameDisplay = document.querySelector("[data-filename-display]");
+    const filenameInput = document.querySelector("[data-filename-input]");
+    const renameForm = document.querySelector("[data-rename-form]");
+    const renameBaseInput = document.querySelector("[data-rename-base]");
 
     let autosaveTimer = null;
     let isDirty = false;
@@ -300,7 +304,48 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    if (filenameDisplay && filenameInput && renameForm && renameBaseInput) {
+        const closeEditor = () => {
+            filenameInput.style.display = "none";
+            filenameDisplay.style.display = "inline";
+        };
+
+        filenameDisplay.addEventListener("click", () => {
+            filenameDisplay.style.display = "none";
+            filenameInput.style.display = "inline";
+            filenameInput.focus();
+            filenameInput.select();
+        });
+
+        filenameInput.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                filenameInput.value = filenameDisplay.textContent || "";
+                closeEditor();
+                return;
+            }
+
+            if (event.key === "Enter") {
+                event.preventDefault();
+                const nextBase = filenameInput.value.trim();
+                if (!nextBase || nextBase === (filenameDisplay.textContent || "").trim()) {
+                    closeEditor();
+                    return;
+                }
+
+                renameBaseInput.value = nextBase;
+                renameForm.requestSubmit();
+            }
+        });
+
+        filenameInput.addEventListener("blur", () => {
+            filenameInput.value = filenameDisplay.textContent || "";
+            closeEditor();
+        });
+    }
 });
+
 
 
 

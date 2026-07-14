@@ -293,6 +293,11 @@ textarea {
     word-break: break-word;
 }
 
+[data-filename-display] {
+    cursor: text;
+    border-bottom: 1px dashed #93c5fd;
+}
+
 .navigation-controls,
 .side-statuses {
     display: flex;
@@ -544,4 +549,5 @@ code {
         grid-template-columns: 1fr 1fr;
     }
 }
+
 

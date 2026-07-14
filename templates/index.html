@@ -21,18 +21,17 @@
                     <input type="file" name="images" accept=".jpg,.jpeg" multiple class="visually-hidden" data-upload-input>
                 </div>
                 <div class="actions">
-                    <button type="submit">Importer</button>
-                    <label><input type="checkbox" name="auto_ocr" value="1"> OCR auto</label>
+                    <label><input type="checkbox" name="auto_ocr" value="1"> OCR auto ?</label>
                 </div>
             </form>
             <div class="actions">
                 <form action="{{ url_for('create_texts') }}" method="post">
-                    <button type="submit" class="secondary">Créer .txt</button>
+                    <button type="submit" class="secondary">Créer les .txt manquants</button>
                 </form>
-                <a href="{{ url_for('export_texts') }}" class="button-link">Export</a>
+                <a href="{{ url_for('export_texts') }}" class="button-link">Exporter tous les .txt</a>
                 {% if done_count > 0 %}
                 <form action="{{ url_for('undo_validation') }}" method="post">
-                    <button type="submit" class="secondary">Undo ({{ done_count }})</button>
+                    <button type="submit" class="secondary">Annuler dernière validation ({{ done_count }})</button>
                 </form>
                 {% endif %}
             </div>

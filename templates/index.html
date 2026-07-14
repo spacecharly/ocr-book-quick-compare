@@ -166,6 +166,7 @@
                         {% set image_ext = '.' ~ image_parts[1] if image_parts|length > 1 else '' %}
                         <h2>{{ t('image') }}</h2>
                         <span class="muted" data-filename-display title="Cliquer pour renommer">{{ image_base }}</span><span class="muted">{{ image_ext }}</span>
+                        <span class="muted file-size-indicator">({{ current_record.image_size_kb }} KB)</span>
                         <input class="muted" type="text" value="{{ image_base }}" data-filename-input style="display: none; width: min(480px, 100%);">
                         <form action="{{ url_for('rename_current') }}" method="post" data-rename-form>
                             <input type="hidden" name="current_image" value="{{ current_image_name }}">

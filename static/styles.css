@@ -402,6 +402,12 @@ textarea {
     word-break: break-word;
 }
 
+.file-size-indicator {
+    margin-left: 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
 [data-filename-display] {
     cursor: text;
     border-bottom: 1px dashed #93c5fd;

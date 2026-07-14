@@ -104,6 +104,18 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("Total pages", page_html)
         self.assertIn("Validated", page_html)
 
+    def test_active_image_header_shows_current_size_in_kb(self) -> None:
+        image_path = self.create_image("page-size.jpg", 100)
+        image_path.write_bytes(b"x" * 1500)
+        image_path.with_suffix(".txt").write_text("text", encoding="utf-8")
+
+        response = self.client.get("/?file=page-size.jpg")
+        page_html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("page-size", page_html)
+        self.assertIn("(2 KB)", page_html)
+
     def test_downsize_badge_visible_when_enabled(self) -> None:
         image_path = self.create_image("page-badge.jpg", 100)
         image_path.with_suffix(".txt").write_text("text", encoding="utf-8")

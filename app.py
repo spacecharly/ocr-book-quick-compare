@@ -326,6 +326,10 @@ class PairRecord:
     def text_length(self) -> int:
         return len(self.text_content.strip())
 
+    @property
+    def image_size_kb(self) -> int:
+        return max(1, (self.image_path.stat().st_size + 1023) // 1024)
+
 
 @dataclass
 class ViewState:

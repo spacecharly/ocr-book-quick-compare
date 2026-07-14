@@ -28,6 +28,7 @@ Small local web app to compare scanned book page images with their OCR text, edi
 - **Auto-OCR on import**: Optional OCR processing while importing images
 - **Multilingual UI**: Language switcher (FR / EN / IT / DE)
 - **Separate OCR language selection**: OCR language can differ from UI language
+- **Downsize validated images**: Optional post-validation compression with target size slider (default 300 KB)
 - **Global text export**: Download all OCR texts as a ZIP file with organized folders
 - **Advanced split view sync**: Horizontal scroll synchronization between image and text panels
 
@@ -165,9 +166,11 @@ Then open: `http://127.0.0.1:5000` (or `:5001` if you started on port 5001)
 5. Review the oldest ready page first
 6. (Optional) Click the current filename under **Image** to rename both image and text pair
 7. Run OCR, edit the text on the right, then save
-8. Click **Validate + next** to save, validate, and move to the next page
-9. Use thumbnails/filters to jump to another page
-10. Continue until no page is left in `images/`
+8. (Optional) Enable **Downsize validated images** and set a target size (default 300 KB)
+9. Click **Validate + next** to save, validate, and move to the next page
+10. If downsize is ON, the image is compressed before it is moved to `images/check-done/`
+11. Use thumbnails/filters to jump to another page
+12. Continue until no page is left in `images/`
 
 ## Keyboard shortcuts
 
@@ -245,6 +248,21 @@ cd "[PROJECT DIR]"
 source .venv/bin/activate
 AUTO_OCR="1" OCR_LANG="fr" python3 app.py
 ```
+
+### Downsize Validated Images
+
+You can keep high-resolution images for OCR work, then downsize them only after validation for lighter archive storage.
+
+- Toggle **Downsize validated images** to `ON` in the top toolbar.
+- Set target size with the slider (default: `300 KB`).
+- Quick presets: `150`, `300`, `500`, `800`, `1200` KB.
+
+Recommended ranges:
+- `300 KB` for a balanced archive footprint/readability
+- `500-800 KB` for more visual comfort
+- `150 KB` only for very aggressive storage reduction
+
+Implementation detail: compression runs during validation (before moving files to `images/check-done/`) and uses best-effort JPEG optimization.
 
 ### Export All Texts
 

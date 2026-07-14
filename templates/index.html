@@ -26,6 +26,8 @@
             <form class="upload-form" action="{{ url_for('upload_images') }}" method="post" enctype="multipart/form-data" data-upload-form>
                 <input type="hidden" name="lang" value="{{ current_lang }}">
                 <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                 <div class="upload-dropzone" data-upload-dropzone>
                     <strong>{{ t('dropzone_title') }}</strong>
                     <span data-upload-label>{{ t('dropzone_hint') }}</span>
@@ -39,6 +41,8 @@
                 <form action="{{ url_for('create_texts') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                    <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('create_txt') }}</button>
                 </form>
                 <a href="{{ url_for('export_texts') }}" class="button-link">{{ t('export') }}</a>
@@ -46,13 +50,15 @@
                 <form action="{{ url_for('undo_validation') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                    <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('undo') }} ({{ done_count }})</button>
                 </form>
                 {% endif %}
             </div>
             <div class="language-switcher">
                 {% for code, label in language_labels.items() %}
-                    <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=code, ocr_lang=view_state.ocr_lang) }}" class="{% if code == current_lang %}active{% endif %}">{{ label }}</a>
+                    <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=code, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="{% if code == current_lang %}active{% endif %}">{{ label }}</a>
                 {% endfor %}
                 <form method="get" action="{{ url_for('index') }}" class="ocr-language-form">
                     <input type="hidden" name="file" value="{{ current_image_name }}">
@@ -61,6 +67,8 @@
                     <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
                     <input type="hidden" name="q" value="{{ view_state.query }}">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
+                    <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                    <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <label>
                         {{ t('ocr_language') }}
                         <select name="ocr_lang" onchange="this.form.submit()">
@@ -72,6 +80,37 @@
                     </label>
                 </form>
             </div>
+            <form method="get" action="{{ url_for('index') }}" class="downsize-form" data-downsize-form>
+                <input type="hidden" name="file" value="{{ current_image_name }}">
+                <input type="hidden" name="sort" value="{{ view_state.sort_key }}">
+                <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}">
+                <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
+                <input type="hidden" name="q" value="{{ view_state.query }}">
+                <input type="hidden" name="lang" value="{{ current_lang }}">
+                <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                <label class="downsize-toggle-label">
+                    <input type="checkbox" name="downsize_enabled" value="1" data-downsize-toggle {% if view_state.downsize_enabled %}checked{% endif %}>
+                    {{ t('downsize_validated') }}
+                </label>
+                <div class="downsize-controls {% if not view_state.downsize_enabled %}is-disabled{% endif %}" data-downsize-controls>
+                    <label>
+                        {{ t('downsize_target') }}
+                        <input type="range"
+                               name="downsize_kb"
+                               min="{{ downsize_min_kb }}"
+                               max="{{ downsize_max_kb }}"
+                               step="{{ downsize_step_kb }}"
+                               value="{{ view_state.downsize_kb }}"
+                               data-downsize-slider>
+                    </label>
+                    <span class="downsize-value" data-downsize-value>{{ view_state.downsize_kb }} KB</span>
+                    <div class="downsize-presets">
+                        {% for preset in downsize_presets %}
+                            <button type="button" class="secondary" data-downsize-preset="{{ preset }}">{{ preset }} KB</button>
+                        {% endfor %}
+                    </div>
+                </div>
+            </form>
         </div>
     </header>
 
@@ -136,15 +175,17 @@
                             <input type="hidden" name="q" value="{{ view_state.query }}">
                             <input type="hidden" name="lang" value="{{ current_lang }}">
                             <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                            <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                            <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                             <input type="hidden" name="new_base" value="" data-rename-base>
                         </form>
                     </div>
                     <div class="navigation-controls">
                         {% if prev_name %}
-                            <a href="{{ url_for('index', file=prev_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang) }}" class="button-link">← {{ t('previous') }}</a>
+                            <a href="{{ url_for('index', file=prev_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('previous') }}</a>
                         {% endif %}
                         {% if next_name %}
-                            <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang) }}" class="button-link">{{ t('next') }} →</a>
+                            <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next') }} →</a>
                         {% endif %}
                     </div>
                 </div>
@@ -169,7 +210,7 @@
                     {% if paginated_records %}
                         <div class="thumbnail-grid">
                             {% for r in paginated_records %}
-                            <a href="{{ url_for('index', file=r.image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang) }}" class="thumbnail-card {% if r.image_name == current_image_name %}active{% endif %}">
+                            <a href="{{ url_for('index', file=r.image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="thumbnail-card {% if r.image_name == current_image_name %}active{% endif %}">
                                 <img src="{{ url_for('page_image', filename=r.image_name) }}" alt="{{ r.image_name }}">
                                 <div class="thumbnail-meta">
                                     <span>{{ r.image_name }}</span>
@@ -182,10 +223,10 @@
                     {% if total_thumbnail_pages > 1 %}
                         <div style="text-align: center; margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
                             {% if thumbnail_page > 1 %}
-                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page-1, q=view_state.query, lang=current_lang) }}" class="button-link">← {{ t('prev_page') }}</a>
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page-1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('prev_page') }}</a>
                             {% endif %}
                             {% if thumbnail_page < total_thumbnail_pages %}
-                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page+1, q=view_state.query, lang=current_lang) }}" class="button-link">{{ t('next_page') }} →</a>
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page+1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next_page') }} →</a>
                             {% endif %}
                         </div>
                     {% endif %}
@@ -204,12 +245,17 @@
                     <input type="hidden" name="q" value="{{ view_state.query }}">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}" data-view-downsize-enabled>
+                    <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}" data-view-downsize-kb>
                     <textarea name="text" data-editor>{{ current_record.text_content }}</textarea>
                     <div class="form-actions">
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>
                         {% endif %}
                         <button type="submit" data-submit-kind="save">💾 {{ t('save') }}</button>
+                        {% if view_state.downsize_enabled %}
+                            <span class="downsize-status-badge">ON ({{ view_state.downsize_kb }} KB)</span>
+                        {% endif %}
                         <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ {{ t('validate_next') }}</button>
                     </div>
                 </form>

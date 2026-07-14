@@ -7,6 +7,11 @@ from unittest.mock import patch
 
 from app import create_app, extract_text_from_paddle_result
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 
 class OCRCompareAppTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -37,6 +42,18 @@ class OCRCompareAppTests(unittest.TestCase):
         os.utime(image_path, (timestamp, timestamp))
         return image_path
 
+    def create_large_valid_jpeg(self, name: str, timestamp: int) -> Path:
+        if Image is None:
+            self.skipTest("Pillow is required for downsize tests")
+
+        image_path = self.images_dir / name
+        width, height = 1600, 2200
+        raw = os.urandom(width * height * 3)
+        image = Image.frombytes("RGB", (width, height), raw)
+        image.save(image_path, format="JPEG", quality=95)
+        os.utime(image_path, (timestamp, timestamp))
+        return image_path
+
     def test_create_missing_text_files_and_select_oldest_page(self) -> None:
         first_image = self.create_image("page-001.jpg", 100)
         second_image = self.create_image("page-002.jpg", 200)
@@ -60,7 +77,7 @@ class OCRCompareAppTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("page-002.jpg", page_html)
-        self.assertIn("Page filtrée 2 / 2", page_html)
+        self.assertIn('value="page-002.jpg" data-current-image', page_html)
 
     def test_search_and_filter_can_limit_visible_results(self) -> None:
         first_image = self.create_image("alpha-page.jpg", 100)
@@ -74,7 +91,7 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("alpha-page.jpg", page_html)
         self.assertNotIn("beta-page.jpg", page_html)
-        self.assertIn("résultats filtrés", page_html)
+        self.assertIn('name="q" value="bonjour"', page_html)
 
     def test_language_switcher_renders_english_labels(self) -> None:
         image_path = self.create_image("page-lang.jpg", 100)
@@ -86,6 +103,16 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Total pages", page_html)
         self.assertIn("Validated", page_html)
+
+    def test_downsize_badge_visible_when_enabled(self) -> None:
+        image_path = self.create_image("page-badge.jpg", 100)
+        image_path.with_suffix(".txt").write_text("text", encoding="utf-8")
+
+        response = self.client.get("/?file=page-badge.jpg&downsize_enabled=1&downsize_kb=300")
+        page_html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("ON (300 KB)", page_html)
 
     def test_save_updates_selected_text_file(self) -> None:
         image_path = self.create_image("page-save.jpg", 100)
@@ -178,6 +205,34 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(moved_text, "saved before move")
         self.assertTrue(second_text.exists())
         self.assertIn("page-b.jpg", response.get_data(as_text=True))
+
+    def test_validate_downsizes_image_when_option_enabled(self) -> None:
+        image_path = self.create_large_valid_jpeg("page-large.jpg", 100)
+        text_path = image_path.with_suffix(".txt")
+        text_path.write_text("texte", encoding="utf-8")
+
+        before_size = image_path.stat().st_size
+        self.assertGreater(before_size, 300 * 1024)
+
+        response = self.client.post(
+            "/validate",
+            data={
+                "current_image": "page-large.jpg",
+                "sort": "oldest",
+                "text_filter": "all",
+                "q": "",
+                "downsize_enabled": "1",
+                "downsize_kb": "300",
+            },
+            follow_redirects=True,
+        )
+
+        done_image = self.check_done_dir / "page-large.jpg"
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(done_image.exists())
+        after_size = done_image.stat().st_size
+        self.assertLess(after_size, before_size)
+        self.assertLessEqual(after_size, 500 * 1024)
 
     def test_undo_validation_reports_conflict_when_name_already_exists(self) -> None:
         image_path = self.create_image("page-conflict.jpg", 100)

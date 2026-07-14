@@ -36,6 +36,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const renameBaseInput = document.querySelector("[data-rename-base]");
     const viewLangInput = saveForm?.querySelector('[name="lang"]');
     const viewOcrLangInput = saveForm?.querySelector('[name="ocr_lang"]');
+    const viewDownsizeEnabledInput = saveForm?.querySelector("[data-view-downsize-enabled]");
+    const viewDownsizeKbInput = saveForm?.querySelector("[data-view-downsize-kb]");
+    const downsizeForm = document.querySelector("[data-downsize-form]");
+    const downsizeToggle = document.querySelector("[data-downsize-toggle]");
+    const downsizeControls = document.querySelector("[data-downsize-controls]");
+    const downsizeSlider = document.querySelector("[data-downsize-slider]");
+    const downsizeValue = document.querySelector("[data-downsize-value]");
+    const downsizePresetButtons = document.querySelectorAll("[data-downsize-preset]");
 
     const bodyDataset = document.body?.dataset || {};
     const i18n = {
@@ -58,6 +66,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let autosaveTimer = null;
     let isDirty = false;
+
+    const syncDownsizeStateToForm = () => {
+        if (!viewDownsizeEnabledInput || !viewDownsizeKbInput) {
+            return;
+        }
+
+        viewDownsizeEnabledInput.value = downsizeToggle?.checked ? "1" : "";
+        viewDownsizeKbInput.value = downsizeSlider?.value || viewDownsizeKbInput.value || "300";
+    };
+
+    const updateDownsizeUi = () => {
+        if (downsizeValue && downsizeSlider) {
+            downsizeValue.textContent = `${downsizeSlider.value} KB`;
+        }
+        if (downsizeControls && downsizeToggle) {
+            downsizeControls.classList.toggle("is-disabled", !downsizeToggle.checked);
+        }
+        syncDownsizeStateToForm();
+    };
 
     const setSaveState = (mode, message) => {
         if (!saveState || !saveStateText) {
@@ -158,6 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     text_filter: viewTextFilterInput?.value || "all",
                     lang: viewLangInput?.value || "fr",
                     ocr_lang: viewOcrLangInput?.value || "",
+                    downsize_enabled: viewDownsizeEnabledInput?.value || "",
+                    downsize_kb: viewDownsizeKbInput?.value || "300",
                 }),
             });
 
@@ -211,6 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (saveForm) {
         saveForm.addEventListener("submit", (event) => {
+            syncDownsizeStateToForm();
             const submitter = event.submitter;
             const submitKind = submitter?.dataset.submitKind;
 
@@ -239,6 +269,35 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             isDirty = false;
+        });
+    }
+
+    if (downsizeForm && downsizeToggle && downsizeSlider) {
+        updateDownsizeUi();
+
+        downsizeToggle.addEventListener("change", () => {
+            updateDownsizeUi();
+            downsizeForm.requestSubmit();
+        });
+
+        downsizeSlider.addEventListener("input", () => {
+            updateDownsizeUi();
+        });
+
+        downsizeSlider.addEventListener("change", () => {
+            updateDownsizeUi();
+            downsizeForm.requestSubmit();
+        });
+
+        downsizePresetButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                if (!downsizeSlider) {
+                    return;
+                }
+                downsizeSlider.value = button.dataset.downsizePreset || downsizeSlider.value;
+                updateDownsizeUi();
+                downsizeForm.requestSubmit();
+            });
         });
     }
 

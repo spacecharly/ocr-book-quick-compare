@@ -1,6 +1,7 @@
 import os
 import shutil
 import zipfile
+from io import BytesIO
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -14,12 +15,23 @@ try:
 except ImportError:
     PaddleOCR = None
 
+try:
+    from PIL import Image, ImageOps
+except ImportError:
+    Image = None
+    ImageOps = None
+
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
 SORT_OPTIONS = {"oldest", "newest", "name_asc", "name_desc", "text_length_desc"}
 TEXT_FILTER_OPTIONS = {"all", "empty", "filled"}
 THUMBNAILS_PER_PAGE = 20
 SUPPORTED_LANGS = ("fr", "en", "it", "de")
 SUPPORTED_OCR_LANGS = ("", "fr", "en", "it", "de")
+DOWNSIZE_TARGET_DEFAULT_KB = 300
+DOWNSIZE_TARGET_MIN_KB = 100
+DOWNSIZE_TARGET_MAX_KB = 1500
+DOWNSIZE_TARGET_STEP_KB = 50
+DOWNSIZE_TARGET_PRESETS_KB = (150, 300, 500, 800, 1200)
 LANGUAGE_LABELS = {
     "fr": "Français",
     "en": "English",
@@ -39,6 +51,8 @@ TRANSLATIONS = {
         "undo": "Annuler la dernière validation",
         "ocr_language": "Langue OCR",
         "ocr_lang_auto": "Automatique (langue du site)",
+        "downsize_validated": "Downsize validated images",
+        "downsize_target": "Poids cible",
         "total_pages": "Pages au total",
         "validated": "Validées",
         "progress": "Progression",
@@ -72,6 +86,8 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Aucune page à valider.",
         "flash_page_validated": "Page validée: {name}.",
         "flash_page_saved_validated": "Page sauvegardée et validée: {name}.",
+        "flash_downsize_applied": "Image réduite pour l'archive: {before_kb} KB -> {after_kb} KB (cible {target_kb} KB).",
+        "flash_downsize_failed": "Réduction impossible pour {name}: {reason}",
         "flash_undo_done": "Dernière validation annulée ({count} fichier(s) restauré(s)).",
         "flash_undo_none": "Aucune validation à annuler.",
         "flash_undo_conflict": "Annulation impossible: {count} validation(s) bloquée(s) car le nom existe déjà dans le dossier actif.",
@@ -100,6 +116,8 @@ TRANSLATIONS = {
         "undo": "Undo last validation",
         "ocr_language": "OCR language",
         "ocr_lang_auto": "Automatic (site language)",
+        "downsize_validated": "Downsize validated images",
+        "downsize_target": "Target size",
         "total_pages": "Total pages",
         "validated": "Validated",
         "progress": "Progress",
@@ -133,6 +151,8 @@ TRANSLATIONS = {
         "flash_no_page_validate": "No page available to validate.",
         "flash_page_validated": "Page validated: {name}.",
         "flash_page_saved_validated": "Page saved and validated: {name}.",
+        "flash_downsize_applied": "Image downsized for archive: {before_kb} KB -> {after_kb} KB (target {target_kb} KB).",
+        "flash_downsize_failed": "Could not downsize {name}: {reason}",
         "flash_undo_done": "Last validation cancelled ({count} file(s) restored).",
         "flash_undo_none": "No validation to undo.",
         "flash_undo_conflict": "Undo blocked: {count} validation(s) could not be restored because the name already exists in active files.",
@@ -161,6 +181,8 @@ TRANSLATIONS = {
         "undo": "Annulla l'ultima validazione",
         "ocr_language": "Lingua OCR",
         "ocr_lang_auto": "Automatico (lingua del sito)",
+        "downsize_validated": "Riduci immagini validate",
+        "downsize_target": "Dimensione target",
         "total_pages": "Pagine totali",
         "validated": "Convalidate",
         "progress": "Avanzamento",
@@ -194,6 +216,8 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Nessuna pagina da convalidare.",
         "flash_page_validated": "Pagina convalidata: {name}.",
         "flash_page_saved_validated": "Pagina salvata e convalidata: {name}.",
+        "flash_downsize_applied": "Immagine ridotta per archivio: {before_kb} KB -> {after_kb} KB (target {target_kb} KB).",
+        "flash_downsize_failed": "Riduzione non riuscita per {name}: {reason}",
         "flash_undo_done": "Ultima validazione annullata ({count} file ripristinato/i).",
         "flash_undo_none": "Nessuna validazione da annullare.",
         "flash_undo_conflict": "Annullamento impossibile: {count} validazione/i bloccata/e perché il nome esiste già tra i file attivi.",
@@ -222,6 +246,8 @@ TRANSLATIONS = {
         "undo": "Letzte Validierung rückgängig",
         "ocr_language": "OCR-Sprache",
         "ocr_lang_auto": "Automatisch (Seitensprache)",
+        "downsize_validated": "Validierte Bilder verkleinern",
+        "downsize_target": "Zielgroesse",
         "total_pages": "Seiten gesamt",
         "validated": "Validiert",
         "progress": "Fortschritt",
@@ -255,6 +281,8 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Keine Seite zum Validieren verfügbar.",
         "flash_page_validated": "Seite validiert: {name}.",
         "flash_page_saved_validated": "Seite gespeichert und validiert: {name}.",
+        "flash_downsize_applied": "Bild fuers Archiv verkleinert: {before_kb} KB -> {after_kb} KB (Ziel {target_kb} KB).",
+        "flash_downsize_failed": "Verkleinerung fehlgeschlagen fuer {name}: {reason}",
         "flash_undo_done": "Letzte Validierung rückgängig ({count} Datei(en) wiederhergestellt).",
         "flash_undo_none": "Keine Validierung zum Rückgängigmachen.",
         "flash_undo_conflict": "Rückgängig blockiert: {count} Validierung(en) konnten nicht wiederhergestellt werden, da der Name bereits bei aktiven Dateien existiert.",
@@ -308,6 +336,8 @@ class ViewState:
     thumbnail_page: int = 1
     lang: str = "fr"
     ocr_lang: str = ""
+    downsize_enabled: bool = False
+    downsize_kb: int = DOWNSIZE_TARGET_DEFAULT_KB
 
 
 
@@ -363,6 +393,20 @@ def normalize_ocr_lang(ocr_lang: str) -> str:
     return ""
 
 
+def normalize_toggle(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def normalize_downsize_kb(value) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return DOWNSIZE_TARGET_DEFAULT_KB
+    return max(DOWNSIZE_TARGET_MIN_KB, min(DOWNSIZE_TARGET_MAX_KB, parsed))
+
+
 def resolve_ocr_lang(view_state: ViewState, configured_ocr_lang: str) -> str:
     if view_state.ocr_lang:
         return view_state.ocr_lang
@@ -390,6 +434,8 @@ def build_view_state(source) -> ViewState:
         thumbnail_page=max(1, int(source.get("thumb_page", 1) or 1)),
         lang=normalize_lang(source.get("lang") or "fr"),
         ocr_lang=normalize_ocr_lang(source.get("ocr_lang") or ""),
+        downsize_enabled=normalize_toggle(source.get("downsize_enabled")),
+        downsize_kb=normalize_downsize_kb(source.get("downsize_kb")),
     )
 
 
@@ -402,6 +448,8 @@ def build_index_params(view_state: ViewState, selected_name: Optional[str] = Non
         "thumb_page": view_state.thumbnail_page,
         "lang": view_state.lang,
         "ocr_lang": view_state.ocr_lang,
+        "downsize_enabled": "1" if view_state.downsize_enabled else "",
+        "downsize_kb": view_state.downsize_kb,
     }
 
     if file_name:
@@ -548,6 +596,60 @@ def move_pair_to_done(image_path: Path, text_path: Path, check_done_dir: Path) -
 
     shutil.move(str(image_path), str(image_target))
     shutil.move(str(text_path), str(text_target))
+
+
+def downsize_image_for_archive(image_path: Path, target_kb: int) -> tuple[bool, int, int]:
+    if Image is None or ImageOps is None:
+        raise RuntimeError("Pillow is not installed in the current environment.")
+
+    bounded_target_kb = normalize_downsize_kb(target_kb)
+    target_bytes = bounded_target_kb * 1024
+    before_bytes = image_path.stat().st_size
+    if before_bytes <= target_bytes:
+        before_kb = round(before_bytes / 1024)
+        return False, before_kb, before_kb
+
+    with Image.open(image_path) as opened:
+        corrected = ImageOps.exif_transpose(opened)
+        if corrected.mode != "RGB":
+            corrected = corrected.convert("RGB")
+        original = corrected.copy()
+
+    best_payload: Optional[bytes] = None
+    best_size: Optional[int] = None
+
+    for scale in (1.0, 0.92, 0.86, 0.8, 0.74):
+        if scale < 1.0:
+            resized = original.resize(
+                (
+                    max(1, int(original.width * scale)),
+                    max(1, int(original.height * scale)),
+                ),
+                Image.Resampling.LANCZOS,
+            )
+        else:
+            resized = original
+
+        for quality in (92, 85, 78, 72, 66, 60, 54, 48, 42, 36):
+            buffer = BytesIO()
+            resized.save(buffer, format="JPEG", quality=quality, optimize=True, progressive=True)
+            payload = buffer.getvalue()
+            size = len(payload)
+
+            if best_size is None or size < best_size:
+                best_size = size
+                best_payload = payload
+
+            if size <= target_bytes:
+                image_path.write_bytes(payload)
+                return True, round(before_bytes / 1024), round(size / 1024)
+
+    if best_payload is not None and best_size is not None and best_size < before_bytes:
+        image_path.write_bytes(best_payload)
+        return True, round(before_bytes / 1024), round(best_size / 1024)
+
+    before_kb = round(before_bytes / 1024)
+    return False, before_kb, before_kb
 
 
 
@@ -781,6 +883,10 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             language_labels=LANGUAGE_LABELS,
             supported_ocr_langs=SUPPORTED_LANGS,
             effective_ocr_lang=effective_ocr_lang,
+            downsize_min_kb=DOWNSIZE_TARGET_MIN_KB,
+            downsize_max_kb=DOWNSIZE_TARGET_MAX_KB,
+            downsize_step_kb=DOWNSIZE_TARGET_STEP_KB,
+            downsize_presets=DOWNSIZE_TARGET_PRESETS_KB,
             t=lambda key, **kwargs: tr(view_state.lang, key, **kwargs),
         )
 
@@ -908,6 +1014,31 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         remaining_records = filtered_records[:current_index] + filtered_records[current_index + 1 :]
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
 
+        if view_state.downsize_enabled:
+            try:
+                resized, before_kb, after_kb = downsize_image_for_archive(current_record.image_path, view_state.downsize_kb)
+                if resized:
+                    flash(
+                        tr(
+                            view_state.lang,
+                            "flash_downsize_applied",
+                            before_kb=before_kb,
+                            after_kb=after_kb,
+                            target_kb=view_state.downsize_kb,
+                        ),
+                        "info",
+                    )
+            except RuntimeError as exc:
+                flash(
+                    tr(
+                        view_state.lang,
+                        "flash_downsize_failed",
+                        name=current_record.image_name,
+                        reason=str(exc),
+                    ),
+                    "error",
+                )
+
         try:
             move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])
         except FileExistsError as exc:
@@ -931,6 +1062,31 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         current_record.text_path.write_text(updated_text, encoding="utf-8")
         remaining_records = filtered_records[:current_index] + filtered_records[current_index + 1 :]
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
+
+        if view_state.downsize_enabled:
+            try:
+                resized, before_kb, after_kb = downsize_image_for_archive(current_record.image_path, view_state.downsize_kb)
+                if resized:
+                    flash(
+                        tr(
+                            view_state.lang,
+                            "flash_downsize_applied",
+                            before_kb=before_kb,
+                            after_kb=after_kb,
+                            target_kb=view_state.downsize_kb,
+                        ),
+                        "info",
+                    )
+            except RuntimeError as exc:
+                flash(
+                    tr(
+                        view_state.lang,
+                        "flash_downsize_failed",
+                        name=current_record.image_name,
+                        reason=str(exc),
+                    ),
+                    "error",
+                )
 
         try:
             move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])

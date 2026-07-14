@@ -1,6 +1,21 @@
+<div align="center">
+
 # OCR Book Quick Compare v4
 
+<p>
+  <img src="resources/imgs/logo-ocr-book-quick-compare-and-validate.png" alt="OCR Book Quick Compare social preview" width="900" />
+</p>
+
+<p>
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" />
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-Web%20App-000000?logo=flask&logoColor=white" />
+  <img alt="OCR" src="https://img.shields.io/badge/OCR-PaddleOCR-1F6FEB" />
+  <img alt="Languages" src="https://img.shields.io/badge/UI-FR%20%7C%20EN%20%7C%20IT%20%7C%20DE-6A5ACD" />
+</p>
+
 Small local web app to compare scanned book page images with their OCR text, edit the text, and validate each page.
+
+</div>
 
 ## v4 Features (New!)
 
@@ -50,8 +65,6 @@ Why it fits this project well:
 - very small stack for a workflow-oriented internal tool
 - easy to test and extend
 - lighter than a full frontend framework for this use case
-
-If you ever prefer a PHP version later, the same workflow can absolutely be ported.
 
 ## Requirements
 

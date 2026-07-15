@@ -3,7 +3,13 @@
 # OCR Book Quick Compare v4
 
 <p>
-  <img src="resources/imgs/logo-ocr-book-quick-compare-and-validate.png" alt="OCR Book Quick Compare social preview" width="900" />
+  <a href="https://youtu.be/8RaAw9v7SG8">
+    <img src="resources/imgs/youtube-demo-thumbnail-play.png" alt="Watch the OCR Book Quick Compare introduction video on YouTube" width="400" />
+  </a>
+</p>
+
+<p>
+  <a href="https://youtu.be/8RaAw9v7SG8"><strong>▶ Watch the 8-minutes introduction video on YouTube</strong></a>
 </p>
 
 <p>

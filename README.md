@@ -114,12 +114,12 @@ Environment flags:
 
 ```bash
 export OCR_POST_SPELLCHECK=1
-export OCR_POST_SPELLCHECK_LANG=fr
 ```
 
 Notes:
 
 - Correction runs after PaddleOCR text extraction.
+- Spellcheck language automatically follows the effective OCR language selected in the app.
 - It is best-effort: if spellchecker is unavailable, OCR still works.
 - Start with French (`fr`) for accent-heavy books.
 

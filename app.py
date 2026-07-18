@@ -1394,7 +1394,7 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             auto_ocr=auto_ocr,
             ocr_lang=effective_ocr_lang,
             spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
-            spellcheck_lang=app.config["OCR_POST_SPELLCHECK_LANG"],
+            spellcheck_lang=effective_ocr_lang,
         )
 
         if created_count:
@@ -1560,7 +1560,7 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
                 current_record.image_path,
                 effective_ocr_lang,
                 spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
-                spellcheck_lang=app.config["OCR_POST_SPELLCHECK_LANG"],
+                spellcheck_lang=effective_ocr_lang,
             )
         except RuntimeError as exc:
             flash(str(exc), "error")

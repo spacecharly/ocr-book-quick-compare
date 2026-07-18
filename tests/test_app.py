@@ -463,6 +463,41 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertTrue(kwargs["spellcheck_enabled"])
         self.assertEqual(kwargs["spellcheck_lang"], "fr")
 
+    def test_run_ocr_spellcheck_language_follows_selected_ocr_language(self) -> None:
+        image_path = self.create_image("page-spell-lang.jpg", 100)
+        image_path.with_suffix(".txt").write_text("", encoding="utf-8")
+
+        app_with_spellcheck = create_app(
+            {
+                "TESTING": True,
+                "SECRET_KEY": "test-secret",
+                "IMAGES_DIR": self.images_dir,
+                "CHECK_DONE_DIR": self.check_done_dir,
+                "OCR_LANG": "fr",
+                "OCR_POST_SPELLCHECK": True,
+                "OCR_POST_SPELLCHECK_LANG": "fr",
+            }
+        )
+        client = app_with_spellcheck.test_client()
+
+        with patch("app.run_ocr_for_image", return_value="idee de mere") as mock_ocr:
+            response = client.post(
+                "/run-ocr",
+                data={
+                    "current_image": "page-spell-lang.jpg",
+                    "sort": "oldest",
+                    "text_filter": "all",
+                    "q": "",
+                    "ocr_lang": "de",
+                },
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        _, kwargs = mock_ocr.call_args
+        self.assertTrue(kwargs["spellcheck_enabled"])
+        self.assertEqual(kwargs["spellcheck_lang"], "de")
+
     def test_run_ocr_disables_spellcheck_when_config_off(self) -> None:
         image_path = self.create_image("page-no-spell.jpg", 100)
         image_path.with_suffix(".txt").write_text("", encoding="utf-8")

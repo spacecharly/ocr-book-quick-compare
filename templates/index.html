@@ -274,6 +274,9 @@
                     <div class="form-actions">
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>
+                            <span class="spellcheck-status-badge {% if effective_spellcheck_enabled %}is-on{% else %}is-off{% endif %}">
+                                {{ t('spellcheck_post_ocr') }}: {{ t('status_on') if effective_spellcheck_enabled else t('status_off') }}
+                            </span>
                         {% endif %}
                         <button type="submit" data-submit-kind="save">💾 {{ t('save') }}</button>
                         {% if view_state.downsize_enabled %}

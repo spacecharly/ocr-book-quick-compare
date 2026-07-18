@@ -614,6 +614,28 @@ textarea {
     font-weight: 700;
 }
 
+.spellcheck-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.spellcheck-status-badge.is-on {
+    background: #ecfeff;
+    color: #0f766e;
+    border-color: #99f6e4;
+}
+
+.spellcheck-status-badge.is-off {
+    background: #f3f4f6;
+    color: #4b5563;
+    border-color: #e5e7eb;
+}
+
 .inset-panel {
     margin-top: 16px;
     background: #f8fafc;

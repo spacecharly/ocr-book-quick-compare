@@ -27,6 +27,7 @@
             <form class="upload-form" action="{{ url_for('upload_images') }}" method="post" enctype="multipart/form-data" data-upload-form>
                 <input type="hidden" name="lang" value="{{ current_lang }}">
                 <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                 <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
                 <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                 <div class="upload-dropzone" data-upload-dropzone>
@@ -36,6 +37,7 @@
                 </div>
                 <div class="actions">
                     <label><input type="checkbox" name="auto_ocr" value="1"> {{ t('auto_ocr') }}</label>
+                    <label><input type="checkbox" name="spellcheck_enabled" value="1" {% if effective_spellcheck_enabled %}checked{% endif %}> {{ t('spellcheck_post_ocr') }}</label>
                 </div>
             </form>
             <form class="working-folder-form" action="{{ url_for('set_working_folder') }}" method="post">
@@ -51,6 +53,7 @@
                 <form action="{{ url_for('create_texts') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                     <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('create_txt') }}</button>
@@ -61,6 +64,7 @@
                 <form action="{{ url_for('undo_validation') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                     <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('undo') }} ({{ done_count }})</button>
@@ -69,7 +73,7 @@
             </div>
             <div class="language-switcher">
                 {% for code, label in language_labels.items() %}
-                    <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=code, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="{% if code == current_lang %}active{% endif %}">{{ label }}</a>
+                    <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=code, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="{% if code == current_lang %}active{% endif %}">{{ label }}</a>
                 {% endfor %}
                 <form method="get" action="{{ url_for('index') }}" class="ocr-language-form">
                     <input type="hidden" name="file" value="{{ current_image_name }}">
@@ -78,6 +82,7 @@
                     <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
                     <input type="hidden" name="q" value="{{ view_state.query }}">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
+                    <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                     <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <label>
@@ -99,6 +104,10 @@
                 <input type="hidden" name="q" value="{{ view_state.query }}">
                 <input type="hidden" name="lang" value="{{ current_lang }}">
                 <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                <label class="downsize-toggle-label">
+                    <input type="checkbox" name="spellcheck_enabled" value="1" onchange="this.form.submit()" {% if effective_spellcheck_enabled %}checked{% endif %}>
+                    {{ t('spellcheck_post_ocr') }}
+                </label>
                 <label class="downsize-toggle-label">
                     <input type="checkbox" name="downsize_enabled" value="1" data-downsize-toggle {% if view_state.downsize_enabled %}checked{% endif %}>
                     {{ t('downsize_validated') }}
@@ -187,6 +196,7 @@
                             <input type="hidden" name="q" value="{{ view_state.query }}">
                             <input type="hidden" name="lang" value="{{ current_lang }}">
                             <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                            <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                             <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
                             <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                             <input type="hidden" name="new_base" value="" data-rename-base>
@@ -194,10 +204,10 @@
                     </div>
                     <div class="navigation-controls">
                         {% if prev_name %}
-                            <a href="{{ url_for('index', file=prev_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('previous') }}</a>
+                            <a href="{{ url_for('index', file=prev_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('previous') }}</a>
                         {% endif %}
                         {% if next_name %}
-                            <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next') }} →</a>
+                            <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next') }} →</a>
                         {% endif %}
                     </div>
                 </div>
@@ -222,7 +232,7 @@
                     {% if paginated_records %}
                         <div class="thumbnail-grid">
                             {% for r in paginated_records %}
-                            <a href="{{ url_for('index', file=r.image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="thumbnail-card {% if r.image_name == current_image_name %}active{% endif %}">
+                            <a href="{{ url_for('index', file=r.image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="thumbnail-card {% if r.image_name == current_image_name %}active{% endif %}">
                                 <img src="{{ url_for('page_image', filename=r.image_name) }}" alt="{{ r.image_name }}">
                                 <div class="thumbnail-meta">
                                     <span>{{ r.image_name }}</span>
@@ -235,10 +245,10 @@
                     {% if total_thumbnail_pages > 1 %}
                         <div style="text-align: center; margin-top: 12px; display: flex; gap: 8px; justify-content: center;">
                             {% if thumbnail_page > 1 %}
-                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page-1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('prev_page') }}</a>
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page-1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">← {{ t('prev_page') }}</a>
                             {% endif %}
                             {% if thumbnail_page < total_thumbnail_pages %}
-                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page+1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next_page') }} →</a>
+                                <a href="{{ url_for('index', file=current_image_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=thumbnail_page+1, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next_page') }} →</a>
                             {% endif %}
                         </div>
                     {% endif %}
@@ -257,6 +267,7 @@
                     <input type="hidden" name="q" value="{{ view_state.query }}">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                    <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
                     <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}" data-view-downsize-enabled>
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}" data-view-downsize-kb>
                     <textarea name="text" data-editor spellcheck="true" lang="{{ current_lang }}" data-lt-active="true">{{ current_record.text_content }}</textarea>

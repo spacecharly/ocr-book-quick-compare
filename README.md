@@ -110,7 +110,12 @@ Why it fits this project well:
 If your OCR output has many accent mistakes (for example `idee` instead of `idée`),
 you can enable an offline dictionary-based correction pass after OCR.
 
-Environment flags:
+From the UI:
+
+- Enable **Post-correction orthographique** in the top toolbar.
+- Click **Paddle OCR** to run OCR with post-correction.
+
+Environment flag (global default):
 
 ```bash
 export OCR_POST_SPELLCHECK=1

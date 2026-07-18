@@ -58,6 +58,7 @@ TRANSLATIONS = {
         "dropzone_title": "Déposer images ici",
         "dropzone_hint": "ou cliquer pour sélectionner",
         "auto_ocr": "OCR auto",
+        "spellcheck_post_ocr": "Post-correction orthographique",
         "create_txt": "Créer les .txt manquants",
         "export": "Exporter les .txt du projet",
         "undo": "Annuler la dernière validation",
@@ -177,6 +178,7 @@ TRANSLATIONS = {
         "dropzone_title": "Drop images here",
         "dropzone_hint": "or click to select",
         "auto_ocr": "Auto OCR",
+        "spellcheck_post_ocr": "Post-OCR spell correction",
         "create_txt": "Create missing .txt files",
         "export": "Export project .txt files",
         "undo": "Undo last validation",
@@ -296,6 +298,7 @@ TRANSLATIONS = {
         "dropzone_title": "Trascina qui le immagini",
         "dropzone_hint": "oppure clicca per selezionare",
         "auto_ocr": "OCR automatico",
+        "spellcheck_post_ocr": "Correzione ortografica post-OCR",
         "create_txt": "Crea i .txt mancanti",
         "export": "Esporta i .txt del progetto",
         "undo": "Annulla l'ultima validazione",
@@ -415,6 +418,7 @@ TRANSLATIONS = {
         "dropzone_title": "Bilder hier ablegen",
         "dropzone_hint": "oder klicken zum Auswählen",
         "auto_ocr": "Auto OCR",
+        "spellcheck_post_ocr": "Rechtschreibkorrektur nach OCR",
         "create_txt": "Fehlende .txt erstellen",
         "export": "Projekt-.txt exportieren",
         "undo": "Letzte Validierung rückgängig",
@@ -579,6 +583,7 @@ class ViewState:
     thumbnail_page: int = 1
     lang: str = "fr"
     ocr_lang: str = ""
+    spellcheck_enabled: bool = False
     downsize_enabled: bool = False
     downsize_kb: int = DOWNSIZE_DEFAULT_KB
 
@@ -719,6 +724,7 @@ def build_view_state(source) -> ViewState:
         thumbnail_page=max(1, int(source.get("thumb_page", 1) or 1)),
         lang=normalize_lang(source.get("lang") or "fr"),
         ocr_lang=normalize_ocr_lang(source.get("ocr_lang") or ""),
+        spellcheck_enabled=bool(source.get("spellcheck_enabled")),
         downsize_enabled=bool(source.get("downsize_enabled")),
         downsize_kb=downsize_kb,
     )
@@ -733,6 +739,7 @@ def build_index_params(view_state: ViewState, selected_name: Optional[str] = Non
         "thumb_page": view_state.thumbnail_page,
         "lang": view_state.lang,
         "ocr_lang": view_state.ocr_lang,
+        "spellcheck_enabled": "1" if view_state.spellcheck_enabled else "",
         "downsize_enabled": "1" if view_state.downsize_enabled else "",
         "downsize_kb": view_state.downsize_kb,
     }
@@ -1334,6 +1341,7 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         total_page_count = root_image_count + done_count
         progress_percent = round((done_count / total_page_count) * 100) if total_page_count else 0
         effective_ocr_lang = resolve_ocr_lang(view_state, app.config["OCR_LANG"])
+        effective_spellcheck_enabled = view_state.spellcheck_enabled or app.config["OCR_POST_SPELLCHECK"]
 
         return render_template(
             "index.html",
@@ -1363,6 +1371,7 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             language_labels=LANGUAGE_LABELS,
             supported_ocr_langs=SUPPORTED_LANGS,
             effective_ocr_lang=effective_ocr_lang,
+            effective_spellcheck_enabled=effective_spellcheck_enabled,
             current_working_folder=str(images_dir),
             t=lambda key, **kwargs: tr(view_state.lang, key, **kwargs),
             downsize_min_kb=DOWNSIZE_MIN_KB,
@@ -1387,12 +1396,13 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         uploaded_files = request.files.getlist("images")
         auto_ocr = request.form.get("auto_ocr") == "1"
         effective_ocr_lang = resolve_ocr_lang(view_state, app.config["OCR_LANG"])
+        effective_spellcheck_enabled = view_state.spellcheck_enabled or app.config["OCR_POST_SPELLCHECK"]
         created_count, skipped_count, _ = save_uploaded_images(
             uploaded_files,
             app.config["IMAGES_DIR"],
             auto_ocr=auto_ocr,
             ocr_lang=effective_ocr_lang,
-            spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
+            spellcheck_enabled=effective_spellcheck_enabled,
             spellcheck_lang=effective_ocr_lang,
         )
 
@@ -1554,11 +1564,12 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             return redirect_to_index(view_state, view_state.selected_name)
 
         effective_ocr_lang = resolve_ocr_lang(view_state, app.config["OCR_LANG"])
+        effective_spellcheck_enabled = view_state.spellcheck_enabled or app.config["OCR_POST_SPELLCHECK"]
         try:
             extracted_text = run_ocr_for_image(
                 current_record.image_path,
                 effective_ocr_lang,
-                spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
+                spellcheck_enabled=effective_spellcheck_enabled,
                 spellcheck_lang=effective_ocr_lang,
             )
         except RuntimeError as exc:

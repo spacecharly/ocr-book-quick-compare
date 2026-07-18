@@ -482,6 +482,17 @@ python3 capture-app/main.py
 - text files are created only when missing, never overwritten by the generation step
 - uploaded image names are preserved as-is
 
+## Utility scripts
+
+- Add a YouTube-like centered play icon on a cover image:
+
+```bash
+cd "[PROJECT DIR]"
+capture-app/.venv/bin/python scripts/add_play_icon_overlay.py \
+  --input resources/imgs/capture-app-cover.png \
+  --output resources/imgs/capture-app-cover.png
+```
+
 ## Privacy & Publishing
 
 - `images/` content is intentionally not versioned (local test/work data)

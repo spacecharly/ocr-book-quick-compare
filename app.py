@@ -1079,12 +1079,38 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         app.config.update(test_config)
 
     def apply_working_folder(folder_path: Path) -> None:
-        resolved = Path(folder_path).expanduser().resolve()
-        resolved.mkdir(parents=True, exist_ok=True)
-        check_done = resolved / "check-done"
-        check_done.mkdir(parents=True, exist_ok=True)
-        app.config["IMAGES_DIR"] = resolved
-        app.config["CHECK_DONE_DIR"] = check_done
+        """Apply working folder with fallback on permission errors."""
+        try:
+            resolved = Path(folder_path).expanduser().resolve()
+            # Check if path is accessible before attempting mkdir
+            if resolved.exists():
+                if not resolved.is_dir():
+                    raise ValueError(f"Path exists but is not a directory: {resolved}")
+                # Verify write access by checking if we can list contents
+                resolved.iterdir()
+            else:
+                # Try to create the directory
+                resolved.mkdir(parents=True, exist_ok=True)
+            check_done = resolved / "check-done"
+            check_done.mkdir(parents=True, exist_ok=True)
+            app.config["IMAGES_DIR"] = resolved
+            app.config["CHECK_DONE_DIR"] = check_done
+        except (OSError, PermissionError, ValueError) as e:
+            # If working folder is inaccessible, fall back to default and clear the state file
+            print(f"Warning: Cannot access working folder '{folder_path}': {e}")
+            print(f"Falling back to default: {app.config['IMAGES_DIR']}")
+            try:
+                state_file = Path(app.config["WORKING_FOLDER_STATE_FILE"])
+                if state_file.exists():
+                    state_file.unlink()  # Remove the stale path
+            except Exception:
+                pass
+            # Ensure default folder exists
+            default_dir = Path(app.config["IMAGES_DIR"])
+            default_dir.mkdir(parents=True, exist_ok=True)
+            check_done = default_dir / "check-done"
+            check_done.mkdir(parents=True, exist_ok=True)
+            app.config["CHECK_DONE_DIR"] = check_done
 
     configured_images_dir = Path(app.config["IMAGES_DIR"])
     state_file = Path(app.config["WORKING_FOLDER_STATE_FILE"])

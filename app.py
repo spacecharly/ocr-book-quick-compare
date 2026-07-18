@@ -969,11 +969,16 @@ def extract_text_from_paddle_result(result) -> str:
 def run_ocr_for_image(image_path: Path, language: str) -> str:
     try:
         ocr = get_paddle_ocr(language)
-        result = ocr.predict(str(image_path))
-        extracted_text = extract_text_from_paddle_result(result)
-        if not extracted_text:
+        extracted_text = ""
+
+        if hasattr(ocr, "predict"):
+            result = ocr.predict(str(image_path))
+            extracted_text = extract_text_from_paddle_result(result)
+
+        if not extracted_text and hasattr(ocr, "ocr"):
             legacy_result = ocr.ocr(str(image_path))
             extracted_text = extract_text_from_paddle_result(legacy_result)
+
         return extracted_text
     except Exception as exc:
         raise RuntimeError(f"Paddle OCR failed: {exc}") from exc

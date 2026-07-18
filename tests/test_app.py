@@ -297,6 +297,25 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("Paddle OCR exécuté pour page-paddle.jpg.", response.get_data(as_text=True))
         self.assertEqual(image_path.with_suffix(".txt").read_text(encoding="utf-8"), "texte paddle")
 
+    def test_run_ocr_falls_back_to_legacy_ocr_when_predict_missing(self) -> None:
+        image_path = self.create_image("page-legacy.jpg", 100)
+        text_path = image_path.with_suffix(".txt")
+        text_path.write_text("", encoding="utf-8")
+
+        class LegacyOnlyOCR:
+            def ocr(self, _path):
+                return [{"rec_texts": ["legacy texte"]}]
+
+        with patch("app.get_paddle_ocr", return_value=LegacyOnlyOCR()):
+            response = self.client.post(
+                "/run-ocr",
+                data={"current_image": "page-legacy.jpg", "sort": "oldest", "text_filter": "all", "q": ""},
+                follow_redirects=True,
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(text_path.read_text(encoding="utf-8"), "legacy texte")
+
     def test_rename_current_renames_image_and_text_pair(self) -> None:
         image_path = self.create_image("old-name.jpg", 100)
         text_path = image_path.with_suffix(".txt")

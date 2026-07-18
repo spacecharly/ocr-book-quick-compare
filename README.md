@@ -13,6 +13,20 @@
 </p>
 
 <p>
+  <a href="https://youtu.be/DMKcqhTXROw">
+    <img src="resources/imgs/capture-app-cover.png" alt="Watch the Capture Companion App demo video on YouTube" width="400" />
+  </a>
+</p>
+
+<p>
+  <a href="https://youtu.be/DMKcqhTXROw"><strong>▶ Watch the Capture Companion App demo on YouTube</strong></a>
+</p>
+
+<p>
+  Quick demo of the browser-based companion capture app: live camera preview, one-page/two-page capture, rotation, fullscreen scan mode, and instant save to your OCR working folder.
+</p>
+
+<p>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" />
   <img alt="Flask" src="https://img.shields.io/badge/Flask-Web%20App-000000?logo=flask&logoColor=white" />
   <img alt="OCR" src="https://img.shields.io/badge/OCR-PaddleOCR-1F6FEB" />

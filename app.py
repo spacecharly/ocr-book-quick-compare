@@ -1242,7 +1242,6 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         OCR_LANG=os.environ.get("OCR_LANG", ""),
         AUTO_OCR=os.environ.get("AUTO_OCR", "0").lower() in ("1", "true", "yes"),
         OCR_POST_SPELLCHECK=os.environ.get("OCR_POST_SPELLCHECK", "0").lower() in ("1", "true", "yes"),
-        OCR_POST_SPELLCHECK_LANG=os.environ.get("OCR_POST_SPELLCHECK_LANG", "").strip(),
         MAX_CONTENT_LENGTH=64 * 1024 * 1024,
         AUTOSAVE_INTERVAL_MS=1500,
         CAPTURE_VOSK_MODEL_DIR=base_dir / "capture-app" / "models" / "vosk-model-small-en-us-0.15",

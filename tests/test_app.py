@@ -446,7 +446,6 @@ class OCRCompareAppTests(unittest.TestCase):
                 "CHECK_DONE_DIR": self.check_done_dir,
                 "OCR_LANG": "fr",
                 "OCR_POST_SPELLCHECK": True,
-                "OCR_POST_SPELLCHECK_LANG": "fr",
             }
         )
         client = app_with_spellcheck.test_client()
@@ -475,7 +474,6 @@ class OCRCompareAppTests(unittest.TestCase):
                 "CHECK_DONE_DIR": self.check_done_dir,
                 "OCR_LANG": "fr",
                 "OCR_POST_SPELLCHECK": True,
-                "OCR_POST_SPELLCHECK_LANG": "fr",
             }
         )
         client = app_with_spellcheck.test_client()

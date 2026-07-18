@@ -1,6 +1,6 @@
 <div align="center">
 
-# OCR Book Quick Compare v6
+# OCR Book Quick Compare v6.1
 
 <p>
   <a href="https://youtu.be/8RaAw9v7SG8">
@@ -40,7 +40,13 @@ Small local web app to compare scanned book page images with their OCR text, edi
 
 </div>
 
-## v6 Features (Latest)
+## v6.1 Features (Latest)
+
+- **Delete current page pair**: New **Effacer / Delete** action with confirmation to safely remove the current image and its paired `.txt`
+- **Cleaner OCR action bar**: `Save` button replaced by a clear **Autosave ON** badge (autosave logic unchanged)
+- **Improved operational safety**: Added backend route and tests for pair deletion with automatic redirect to next available page
+
+## v6 Features
 
 - **Offline post-OCR spell correction**: Optional `pyspellchecker` pass after OCR with visible ON/OFF switch
 - **GUI workflow improvements**: OCR tools moved under **OCR Text** for faster editing loops (OCR language, spellcheck switch, post-validation downsize controls)

@@ -157,6 +157,8 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Valider cette page et passer à la suivante ?",
         "js_confirm_ocr_overwrite": "Le texte affiché a été modifié. Lancer l'OCR va remplacer le contenu actuel. Continuer ?",
         "js_upload_ready": "{count} fichier(s) prêt(s). Déposez-en d'autres ou relâchez pour importer.",
+        "downsize_validated": "Réduire les images validées",
+        "downsize_target": "Taille cible",
     },
     "en": {
         "title": "OCR Book Quick Compare",
@@ -274,6 +276,8 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Validate this page and move to the next one?",
         "js_confirm_ocr_overwrite": "Displayed text was edited. Running OCR will replace current content. Continue?",
         "js_upload_ready": "{count} file(s) ready. Drop more files or release to import.",
+        "downsize_validated": "Downsize validated images",
+        "downsize_target": "Target size",
     },
     "it": {
         "title": "OCR Book Quick Compare",
@@ -391,6 +395,8 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Convalidare questa pagina e passare alla successiva?",
         "js_confirm_ocr_overwrite": "Il testo visualizzato è stato modificato. L'OCR sostituirà il contenuto corrente. Continuare?",
         "js_upload_ready": "{count} file pronto/i. Trascinane altri o rilascia per importare.",
+        "downsize_validated": "Riduci le immagini convalidate",
+        "downsize_target": "Dimensione target",
     },
     "de": {
         "title": "OCR Book Quick Compare",
@@ -508,8 +514,17 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Diese Seite validieren und zur nächsten wechseln?",
         "js_confirm_ocr_overwrite": "Der angezeigte Text wurde geändert. OCR ersetzt den aktuellen Inhalt. Fortfahren?",
         "js_upload_ready": "{count} Datei(en) bereit. Weitere ablegen oder zum Import loslassen.",
+        "downsize_validated": "Validierte Bilder verkleinern",
+        "downsize_target": "Zielgröße",
     },
 }
+
+
+DOWNSIZE_MIN_KB = 50
+DOWNSIZE_MAX_KB = 1000
+DOWNSIZE_STEP_KB = 50
+DOWNSIZE_DEFAULT_KB = 300
+DOWNSIZE_PRESETS = [100, 200, 300, 500]
 
 
 @dataclass
@@ -553,6 +568,8 @@ class ViewState:
     thumbnail_page: int = 1
     lang: str = "fr"
     ocr_lang: str = ""
+    downsize_enabled: bool = False
+    downsize_kb: int = DOWNSIZE_DEFAULT_KB
 
 
 
@@ -678,6 +695,11 @@ def tr(lang: str, key: str, **kwargs) -> str:
 
 
 def build_view_state(source) -> ViewState:
+    raw_kb = source.get("downsize_kb", DOWNSIZE_DEFAULT_KB)
+    try:
+        downsize_kb = max(DOWNSIZE_MIN_KB, min(DOWNSIZE_MAX_KB, int(raw_kb)))
+    except (ValueError, TypeError):
+        downsize_kb = DOWNSIZE_DEFAULT_KB
     return ViewState(
         selected_name=(source.get("current_image") or source.get("file") or "").strip(),
         query=(source.get("q") or "").strip(),
@@ -686,6 +708,8 @@ def build_view_state(source) -> ViewState:
         thumbnail_page=max(1, int(source.get("thumb_page", 1) or 1)),
         lang=normalize_lang(source.get("lang") or "fr"),
         ocr_lang=normalize_ocr_lang(source.get("ocr_lang") or ""),
+        downsize_enabled=bool(source.get("downsize_enabled")),
+        downsize_kb=downsize_kb,
     )
 
 
@@ -698,6 +722,8 @@ def build_index_params(view_state: ViewState, selected_name: Optional[str] = Non
         "thumb_page": view_state.thumbnail_page,
         "lang": view_state.lang,
         "ocr_lang": view_state.ocr_lang,
+        "downsize_enabled": "1" if view_state.downsize_enabled else "",
+        "downsize_kb": view_state.downsize_kb,
     }
 
     if file_name:
@@ -1192,6 +1218,10 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             effective_ocr_lang=effective_ocr_lang,
             current_working_folder=str(images_dir),
             t=lambda key, **kwargs: tr(view_state.lang, key, **kwargs),
+            downsize_min_kb=DOWNSIZE_MIN_KB,
+            downsize_max_kb=DOWNSIZE_MAX_KB,
+            downsize_step_kb=DOWNSIZE_STEP_KB,
+            downsize_presets=DOWNSIZE_PRESETS,
         )
 
     @app.post("/create-missing-texts")

@@ -295,6 +295,43 @@ Then open: `http://127.0.0.1:5000` (or `:5001` if you started on port 5001)
 - `Alt + C`: create missing `.txt` files
 - **Rotation** & **Zoom**: Use the UI buttons (keyboard shortcuts planned for future versions)
 
+## Text Editing & Spell Checking
+
+### Install LanguageTool for French Spell & Grammar Checking
+
+The text editor uses **LanguageTool** extension for advanced French (and multilingual) spell checking and grammar correction.
+
+**Why LanguageTool?**
+- ✓ Excellent French spelling & grammar detection
+- ✓ Context-aware suggestions
+- ✓ Works offline (after first setup)
+- ✓ Personal dictionary (no macOS cache issues)
+- ✓ Supports 30+ languages
+- ✓ Open source and free
+
+**Installation:**
+
+1. Open Chrome and go to [LanguageTool on Chrome Web Store](https://chrome.google.com/webstore)
+2. Search for **"LanguageTool"** (by LanguageTool GmbH)
+3. Click **"Add to Chrome"** and confirm permissions
+4. The extension will appear in your Chrome toolbar
+
+**Usage:**
+- In any text field (including this app), red underlines appear for spelling errors
+- Blue underlines appear for grammar suggestions
+- Hover or click to see corrections and suggestions
+- Right-click and select "Ignore" to skip a word, or "Add to dictionary" to learn it permanently
+
+**Configure language:**
+- Click the LanguageTool icon in the toolbar → Settings → Language
+- Select **"Français"** (or your preferred language)
+- Optionally enable grammar checking (may slow down slightly)
+
+**Remove learned words:**
+- LanguageTool stores its personal dictionary locally in your browser profile
+- If you accidentally added a word: right-click it → "Remove from dictionary"
+- To clear all custom words: LanguageTool Settings → Dictionary → "Clear"
+
 ## OCR Setup & Language Configuration
 
 The **Paddle OCR** button uses `paddleocr` and `paddlepaddle` from the Python environment.
@@ -454,11 +491,3 @@ python3 capture-app/main.py
 ```bash
 git ls-files
 ```
-
-
-
-
-
-
-
-

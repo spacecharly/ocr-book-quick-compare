@@ -259,7 +259,7 @@
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
                     <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}" data-view-downsize-enabled>
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}" data-view-downsize-kb>
-                    <textarea name="text" data-editor>{{ current_record.text_content }}</textarea>
+                    <textarea name="text" data-editor spellcheck="true" lang="{{ current_lang }}" data-lt-active="true">{{ current_record.text_content }}</textarea>
                     <div class="form-actions">
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>

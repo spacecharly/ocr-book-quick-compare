@@ -1,6 +1,6 @@
 <div align="center">
 
-# OCR Book Quick Compare v4
+# OCR Book Quick Compare v5
 
 <p>
   <a href="https://youtu.be/8RaAw9v7SG8">
@@ -37,7 +37,16 @@ Small local web app to compare scanned book page images with their OCR text, edi
 
 </div>
 
-## v4 Features (New!)
+## v5 Features (New!)
+
+- **Browser-based Capture Companion App**: Live camera preview, browser media APIs, auto image split for two-page mode
+- **Shared Working Folder**: Unified folder between OCR app and capture app for seamless workflow
+- **Capture modes**: Single page (one_page) or auto-split dual pages (two_pages with -left/-right naming)
+- **Voice trigger**: Hands-free capture with `next` keyword (local Vosk + Flask, no cloud dependency)
+- **Rotation & preview control**: Real-time rotation preview before capture, ±90° buttons, fullscreen scan mode
+- **Capture settings persistence**: Browser local storage for mode, prefix, beep, rotation
+
+## v4 Features
 
 - **Validation history**: Undo the last validated page to move it back to the queue
 - **Inline rename**: Click the current filename to rename `.jpg/.jpeg` and paired `.txt`
@@ -51,8 +60,6 @@ Small local web app to compare scanned book page images with their OCR text, edi
 - **Downsize validated images**: Optional post-validation compression with target size slider (default 300 KB)
 - **Global text export**: Download all OCR texts as a ZIP file with organized folders
 - **Advanced split view sync**: Horizontal scroll synchronization between image and text panels
-- **Capture companion app**: Open a browser-based capture tool from the top toolbar (camera live view, voice trigger, rotation, 1-page/2-page modes)
-- **Shared Working Folder**: Use one common folder between OCR app and capture app so newly captured images appear directly in OCR review
 
 ## Core Features (v3 & earlier)
 

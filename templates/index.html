@@ -21,7 +21,7 @@
     <header class="topbar">
         <div class="title-block">
             <h1>{{ t('title') }}</h1>
-            <p class="subtitle">{{ t('subtitle') }}</p>
+            <p class="subtitle">{{ t('subtitle') }} <a href="https://github.com/spacecharly/ocr-book-quick-compare" target="_blank" style="font-size: 0.85em; margin-left: 0.5em;">GitHub</a></p>
         </div>
         <div class="toolbar">
             <form class="upload-form" action="{{ url_for('upload_images') }}" method="post" enctype="multipart/form-data" data-upload-form>

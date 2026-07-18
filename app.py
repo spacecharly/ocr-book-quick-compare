@@ -160,7 +160,7 @@ TRANSLATIONS = {
     },
     "en": {
         "title": "OCR Book Quick Compare",
-        "subtitle": "v4 - Layout fix",
+        "subtitle": "v5",
         "dropzone_title": "Drop images here",
         "dropzone_hint": "or click to select",
         "auto_ocr": "Auto OCR",

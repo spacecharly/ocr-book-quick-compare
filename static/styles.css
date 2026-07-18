@@ -263,6 +263,10 @@ button.validate {
     background: #059669;
 }
 
+button.danger {
+    background: #dc2626;
+}
+
 button:disabled,
 .button-link.disabled {
     background: #9ca3af;
@@ -682,7 +686,6 @@ textarea {
     border: 1px solid #a7f3d0;
     font-size: 12px;
     font-weight: 700;
-    text-transform: lowercase;
 }
 
 .inset-panel {

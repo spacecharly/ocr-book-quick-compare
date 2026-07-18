@@ -149,6 +149,11 @@ TRANSLATIONS = {
         "flash_text_updated": "Texte mis à jour pour {name}.",
         "flash_no_page_rename": "Aucune page à renommer.",
         "flash_renamed": "Fichier renommé: {name}",
+        "flash_no_page_delete": "Aucune page à supprimer.",
+        "flash_pair_deleted": "Paire supprimée: {name}.",
+        "flash_delete_failed": "Suppression impossible pour {name}: {error}",
+        "delete_current": "Effacer",
+        "confirm_delete_current": "Supprimer cette image et son texte associé ? Cette action est irréversible.",
         "flash_no_page_ocr": "Aucune page disponible pour lancer l'OCR.",
         "flash_ocr_empty": "Paddle OCR n'a renvoyé aucun texte pour {name}.",
         "flash_ocr_done": "Paddle OCR exécuté pour {name}.",
@@ -173,6 +178,7 @@ TRANSLATIONS = {
         "js_upload_ready": "{count} fichier(s) prêt(s). Déposez-en d'autres ou relâchez pour importer.",
         "downsize_validated": "Post-validation downsize images",
         "downsize_target": "Taille cible",
+        "autosave_badge": "Autosave ON",
     },
     "en": {
         "title": "OCR Book Quick Compare",
@@ -271,6 +277,11 @@ TRANSLATIONS = {
         "flash_text_updated": "Text updated for {name}.",
         "flash_no_page_rename": "No page available to rename.",
         "flash_renamed": "File renamed: {name}",
+        "flash_no_page_delete": "No page available to delete.",
+        "flash_pair_deleted": "Pair deleted: {name}.",
+        "flash_delete_failed": "Could not delete {name}: {error}",
+        "delete_current": "Delete",
+        "confirm_delete_current": "Delete this image and its matching text file? This action cannot be undone.",
         "flash_no_page_ocr": "No page available to run OCR.",
         "flash_ocr_empty": "Paddle OCR returned no text for {name}.",
         "flash_ocr_done": "Paddle OCR executed for {name}.",
@@ -295,6 +306,7 @@ TRANSLATIONS = {
         "js_upload_ready": "{count} file(s) ready. Drop more files or release to import.",
         "downsize_validated": "Post-validation downsize images",
         "downsize_target": "Target size",
+        "autosave_badge": "Autosave ON",
     },
     "it": {
         "title": "OCR Book Quick Compare",
@@ -393,6 +405,11 @@ TRANSLATIONS = {
         "flash_text_updated": "Testo aggiornato per {name}.",
         "flash_no_page_rename": "Nessuna pagina da rinominare.",
         "flash_renamed": "File rinominato: {name}",
+        "flash_no_page_delete": "Nessuna pagina da eliminare.",
+        "flash_pair_deleted": "Coppia eliminata: {name}.",
+        "flash_delete_failed": "Impossibile eliminare {name}: {error}",
+        "delete_current": "Elimina",
+        "confirm_delete_current": "Eliminare questa immagine e il relativo file di testo? Questa azione è irreversibile.",
         "flash_no_page_ocr": "Nessuna pagina disponibile per OCR.",
         "flash_ocr_empty": "Paddle OCR non ha restituito testo per {name}.",
         "flash_ocr_done": "Paddle OCR eseguito per {name}.",
@@ -417,6 +434,7 @@ TRANSLATIONS = {
         "js_upload_ready": "{count} file pronto/i. Trascinane altri o rilascia per importare.",
         "downsize_validated": "Immagini ridimensionate dopo la convalida",
         "downsize_target": "Dimensione target",
+        "autosave_badge": "Autosave ON",
     },
     "de": {
         "title": "OCR Book Quick Compare",
@@ -515,6 +533,11 @@ TRANSLATIONS = {
         "flash_text_updated": "Text für {name} aktualisiert.",
         "flash_no_page_rename": "Keine Seite zum Umbenennen verfügbar.",
         "flash_renamed": "Datei umbenannt: {name}",
+        "flash_no_page_delete": "Keine Seite zum Löschen verfügbar.",
+        "flash_pair_deleted": "Paar gelöscht: {name}.",
+        "flash_delete_failed": "Löschen fehlgeschlagen für {name}: {error}",
+        "delete_current": "Löschen",
+        "confirm_delete_current": "Dieses Bild und die zugehörige Textdatei löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
         "flash_no_page_ocr": "Keine Seite für OCR verfügbar.",
         "flash_ocr_empty": "Paddle OCR hat keinen Text für {name} geliefert.",
         "flash_ocr_done": "Paddle OCR für {name} ausgeführt.",
@@ -539,6 +562,7 @@ TRANSLATIONS = {
         "js_upload_ready": "{count} Datei(en) bereit. Weitere ablegen oder zum Import loslassen.",
         "downsize_validated": "Bilder nach der Validierung verkleinern",
         "downsize_target": "Zielgröße",
+        "autosave_badge": "Autosave ON",
     },
 }
 
@@ -1542,6 +1566,28 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
 
         flash(tr(view_state.lang, "flash_renamed", name=target_image.name), "success")
         return redirect_to_index(view_state, target_image.name)
+
+    @app.post("/delete-current")
+    def delete_current():
+        view_state = build_view_state(request.form)
+        _, filtered_records, _ = get_filtered_context(view_state)
+        current_record, current_index = get_selected_record(filtered_records, view_state.selected_name)
+        if not current_record:
+            flash(tr(view_state.lang, "flash_no_page_delete"), "info")
+            return redirect_to_index(view_state, view_state.selected_name)
+
+        remaining_records = filtered_records[:current_index] + filtered_records[current_index + 1 :]
+        next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
+
+        try:
+            current_record.image_path.unlink(missing_ok=False)
+            current_record.text_path.unlink(missing_ok=False)
+        except OSError as exc:
+            flash(tr(view_state.lang, "flash_delete_failed", name=current_record.image_name, error=str(exc)), "error")
+            return redirect_to_index(view_state, current_record.image_name)
+
+        flash(tr(view_state.lang, "flash_pair_deleted", name=current_record.image_name), "success")
+        return redirect_to_index(view_state, next_name)
 
     @app.post("/autosave")
     def autosave_text():

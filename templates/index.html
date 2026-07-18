@@ -145,6 +145,18 @@
                             <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                             <input type="hidden" name="new_base" value="" data-rename-base>
                         </form>
+                        <form id="delete-current-form" action="{{ url_for('delete_current') }}" method="post" data-delete-form onsubmit="return window.confirm('{{ t('confirm_delete_current') }}')">
+                            <input type="hidden" name="current_image" value="{{ current_image_name }}">
+                            <input type="hidden" name="sort" value="{{ view_state.sort_key }}">
+                            <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}">
+                            <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
+                            <input type="hidden" name="q" value="{{ view_state.query }}">
+                            <input type="hidden" name="lang" value="{{ current_lang }}">
+                            <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
+                            <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">
+                            <input type="hidden" name="downsize_enabled" value="{{ '1' if view_state.downsize_enabled else '' }}">
+                            <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
+                        </form>
                     </div>
                     <div class="navigation-controls">
                         {% if prev_name %}
@@ -153,6 +165,7 @@
                         {% if next_name %}
                             <a href="{{ url_for('index', file=next_name, sort=view_state.sort_key, text_filter=view_state.text_filter, thumb_page=view_state.thumbnail_page, q=view_state.query, lang=current_lang, ocr_lang=view_state.ocr_lang, spellcheck_enabled='1' if effective_spellcheck_enabled else '', downsize_enabled='1' if view_state.downsize_enabled else '', downsize_kb=view_state.downsize_kb) }}" class="button-link">{{ t('next') }} →</a>
                         {% endif %}
+                        <button type="submit" class="danger" form="delete-current-form">🗑️ {{ t('delete_current') }}</button>
                     </div>
                 </div>
 
@@ -264,7 +277,7 @@
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>
                         {% endif %}
-                        <span class="autosave-status-badge">autosave on</span>
+                        <span class="autosave-status-badge">{{ t('autosave_badge') }}</span>
                         <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ {{ t('validate_next') }}</button>
                     </div>
                 </form>

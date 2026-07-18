@@ -194,6 +194,28 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertTrue(first_image.exists())
         self.assertTrue(third_image.exists())
 
+    def test_delete_current_removes_pair_and_redirects_to_next(self) -> None:
+        first_image = self.create_image("page-001.jpg", 100)
+        second_image = self.create_image("page-002.jpg", 200)
+        third_image = self.create_image("page-003.jpg", 300)
+        first_image.with_suffix(".txt").write_text("texte 1", encoding="utf-8")
+        second_image.with_suffix(".txt").write_text("texte 2", encoding="utf-8")
+        third_image.with_suffix(".txt").write_text("texte 3", encoding="utf-8")
+
+        response = self.client.post(
+            "/delete-current",
+            data={"current_image": "page-002.jpg", "sort": "oldest", "text_filter": "all", "q": ""},
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(second_image.exists())
+        self.assertFalse(second_image.with_suffix(".txt").exists())
+        self.assertTrue(first_image.exists())
+        self.assertTrue(third_image.exists())
+        self.assertIn("Paire supprimée: page-002.jpg.", response.get_data(as_text=True))
+        self.assertIn("page-003.jpg", response.get_data(as_text=True))
+
     def test_validate_downsizes_image_when_option_enabled(self) -> None:
         image_path = self.create_real_jpeg("page-validate-downsize.jpg", 100)
         image_path.with_suffix(".txt").write_text("draft", encoding="utf-8")

@@ -19,7 +19,7 @@
   <img alt="Languages" src="https://img.shields.io/badge/UI-FR%20%7C%20EN%20%7C%20IT%20%7C%20DE-6A5ACD" />
 </p>
 
-Small local web app to compare scanned book page images with their OCR text, edit the text, and validate each page.
+Small local web app to compare scanned book page images with their OCR text, edit the text, and validate each page, now paired with a companion capture app for live page photography.
 
 </div>
 
@@ -37,6 +37,8 @@ Small local web app to compare scanned book page images with their OCR text, edi
 - **Downsize validated images**: Optional post-validation compression with target size slider (default 300 KB)
 - **Global text export**: Download all OCR texts as a ZIP file with organized folders
 - **Advanced split view sync**: Horizontal scroll synchronization between image and text panels
+- **Capture companion app**: Open a browser-based capture tool from the top toolbar (camera live view, voice trigger, rotation, 1-page/2-page modes)
+- **Shared Working Folder**: Use one common folder between OCR app and capture app so newly captured images appear directly in OCR review
 
 ## Core Features (v3 & earlier)
 
@@ -85,6 +87,14 @@ Why it fits this project well:
 ├── app.py
 ├── requirements.txt
 ├── README.md
+├── capture-app/
+│   ├── main.py
+│   ├── capture_core.py
+│   ├── voice_trigger.py
+│   ├── download_vosk_model.py
+│   ├── requirements.txt
+│   └── tests/
+│       └── test_capture_core.py
 ├── static/
 │   ├── app.js
 │   └── styles.css
@@ -105,6 +115,38 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## One-command bootstrap (recommended)
+
+Use the bootstrap script to configure both virtualenvs, install dependencies, download the Vosk model, and run basic checks.
+
+```bash
+cd "[PROJECT DIR]"
+./bootstrap.sh
+```
+
+Useful options:
+
+```bash
+cd "[PROJECT DIR]"
+./bootstrap.sh --help
+./bootstrap.sh --skip-model
+./bootstrap.sh --dry-run
+```
+
+### Companion app setup (separate venv recommended)
+
+`paddleocr` and camera/audio packages have conflicting OpenCV constraints on some macOS setups.
+Use a dedicated virtualenv for `capture-app`:
+
+```bash
+cd "[PROJECT DIR]/capture-app"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+If you already ran `./bootstrap.sh`, this step is already done.
+
 ## OCR engine
 
 This project now uses **PaddleOCR only**.
@@ -121,6 +163,71 @@ pip install -r requirements.txt
 cd "[PROJECT DIR]"
 source .venv/bin/activate
 python3 app.py
+```
+
+## Démarrage quotidien
+
+Une fois `./bootstrap.sh` exécuté avec succès une première fois, le flux quotidien recommandé est le suivant.
+
+### 1) Redémarrer l'app web OCR
+
+Utilise `restart.sh` pour relancer proprement l'application principale Flask :
+
+```bash
+cd "[PROJECT DIR]"
+./restart.sh
+```
+
+Notes :
+- le script utilise automatiquement le virtualenv racine `./.venv`
+- il arrête un ancien serveur du projet s'il écoute déjà sur le même port
+- par défaut, le port utilisé est `5001`
+
+Ensuite, ouvre dans le navigateur :
+
+```text
+http://127.0.0.1:5001
+```
+
+### 2) Ouvrir la companion capture app
+
+Depuis l'interface de `OCR Book Quick Compare`, clique sur **Open Capture App** dans la barre du haut.
+
+La companion app s'ouvre dans un **nouvel onglet du navigateur**.
+
+Elle utilise les API web du navigateur pour :
+- détecter les caméras disponibles
+- afficher le flux live
+- capturer 1 page ou 2 pages
+- séparer automatiquement gauche/droite en mode 2 pages
+- écouter le mot déclencheur `next` si le navigateur supporte la reconnaissance vocale
+
+### 3) Alternative: lancer la capture app manuellement
+
+La version recommandée est désormais celle dans le navigateur.
+
+Le prototype desktop dans `capture-app/` peut rester utile pour des essais techniques, mais sur certaines machines macOS il peut planter à cause de la pile GUI native Python/Tk.
+
+Si tu veux quand même tester ce prototype desktop manuellement :
+
+```bash
+cd "[PROJECT DIR]"
+source capture-app/.venv/bin/activate
+python3 capture-app/main.py
+```
+
+### 4) Quand relancer `bootstrap.sh` ?
+
+Tu n'as normalement pas besoin de relancer `bootstrap.sh` chaque jour.
+Relance-le seulement si par exemple :
+
+- tu recrées les virtualenvs
+- tu modifies les dépendances Python
+- tu veux retélécharger/configurer le modèle vocal Vosk
+
+```bash
+cd "[PROJECT DIR]"
+./bootstrap.sh
 ```
 
 ## Restart the app
@@ -284,7 +391,49 @@ Use this for backup, bulk processing, or downstream workflows.
 cd "[PROJECT DIR]"
 source .venv/bin/activate
 python3 -m unittest discover -s tests
+
+# Companion capture app unit tests
+python3 -m unittest discover -s capture-app/tests
 ```
+
+## Companion Capture App (macOS)
+
+Use this when you want hands-free image capture while holding book pages.
+
+- Trigger word: `next` (English)
+- Camera source selection from detected devices
+- Shared **Working Folder** configured in the main OCR app
+- Captured images are saved directly into that Working Folder (with paired `.txt` files)
+- Mode `one_page` (single file) or `two_pages` (auto split into `-left` and `-right`)
+- Fixed center alignment line shown in `two_pages` mode
+- Opens in a new browser tab from the main app
+- Visual capture counter
+- Configurable filename prefix
+- Optional audio beep after each capture
+- More explicit browser compatibility status (Chrome / Safari / Firefox)
+- Voice trigger now auto-retries on transient network errors and shows clearer microphone/network guidance
+- Voice trigger now uses local detection through Flask + Vosk (no browser cloud speech dependency)
+
+Start from web UI:
+- Click **Open Capture App** in the top toolbar
+
+Configure the shared Working Folder from the main OCR app toolbar, then capture in the companion tab.
+
+Tip: in the main app toolbar you can click **Choose working folder** to select it directly with Finder on macOS.
+
+Recommended browser:
+- Chrome for best support of camera + speech + capture responsiveness
+- Safari may work for camera access, but speech/capture behavior may be more limited
+
+Legacy desktop prototype (optional):
+
+```bash
+cd "[PROJECT DIR]"
+source capture-app/.venv/bin/activate
+python3 capture-app/download_vosk_model.py
+python3 capture-app/main.py
+```
+
 
 ## Notes
 

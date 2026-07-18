@@ -1,7 +1,11 @@
 import os
 import shutil
+import subprocess
+import sys
 import zipfile
-from io import BytesIO
+import io
+import json
+import wave
 from dataclasses import dataclass
 from datetime import datetime
 from functools import lru_cache
@@ -12,14 +16,16 @@ from flask import Flask, flash, jsonify, redirect, render_template, request, sen
 
 try:
     from paddleocr import PaddleOCR
-except ImportError:
+    PADDLEOCR_IMPORT_ERROR = ""
+except Exception as exc:
     PaddleOCR = None
+    PADDLEOCR_IMPORT_ERROR = str(exc)
 
 try:
-    from PIL import Image, ImageOps
-except ImportError:
-    Image = None
-    ImageOps = None
+    from vosk import KaldiRecognizer, Model as VoskModel
+except Exception:
+    KaldiRecognizer = None
+    VoskModel = None
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg"}
 SORT_OPTIONS = {"oldest", "newest", "name_asc", "name_desc", "text_length_desc"}
@@ -27,11 +33,6 @@ TEXT_FILTER_OPTIONS = {"all", "empty", "filled"}
 THUMBNAILS_PER_PAGE = 20
 SUPPORTED_LANGS = ("fr", "en", "it", "de")
 SUPPORTED_OCR_LANGS = ("", "fr", "en", "it", "de")
-DOWNSIZE_TARGET_DEFAULT_KB = 300
-DOWNSIZE_TARGET_MIN_KB = 100
-DOWNSIZE_TARGET_MAX_KB = 1500
-DOWNSIZE_TARGET_STEP_KB = 50
-DOWNSIZE_TARGET_PRESETS_KB = (150, 300, 500, 800, 1200)
 LANGUAGE_LABELS = {
     "fr": "Français",
     "en": "English",
@@ -51,8 +52,6 @@ TRANSLATIONS = {
         "undo": "Annuler la dernière validation",
         "ocr_language": "Langue OCR",
         "ocr_lang_auto": "Automatique (langue du site)",
-        "downsize_validated": "Downsize validated images",
-        "downsize_target": "Poids cible",
         "total_pages": "Pages au total",
         "validated": "Validées",
         "progress": "Progression",
@@ -75,6 +74,58 @@ TRANSLATIONS = {
         "flash_uploaded_images": "{count} image(s) importée(s).",
         "flash_auto_ocr_suffix": " OCR auto appliqué.",
         "flash_skipped_files": "{count} fichier(s) ignoré(s) (doublon ou format non supporté).",
+        "launch_capture_app": "Ouvrir Capture App",
+        "working_folder": "Working Folder",
+        "working_folder_hint": "Chemin absolu du dossier de travail partagé",
+        "choose_working_folder": "Choisir dossier travail",
+        "apply_working_folder": "Appliquer",
+        "flash_working_folder_updated": "Working Folder mis à jour: {path}",
+        "flash_working_folder_invalid": "Working Folder invalide: {error}",
+        "flash_working_folder_picker_unavailable": "Le sélecteur de dossier Finder est indisponible sur ce système.",
+        "flash_working_folder_picker_failed": "Impossible d'ouvrir le sélecteur Finder: {error}",
+        "capture_title": "Capture App",
+        "capture_subtitle": "Prise de vue depuis le navigateur avec sélection caméra, voix et découpe 2 pages.",
+        "capture_back": "Retour à OCR Book Quick Compare",
+        "capture_enable_camera": "Activer la caméra",
+        "capture_refresh_cameras": "Rafraîchir les caméras",
+        "capture_camera": "Caméra",
+        "capture_mode": "Mode",
+        "capture_rotation": "Rotation",
+        "capture_rotate_left": "↺ -90°",
+        "capture_rotate_right": "↻ +90°",
+        "capture_mode_one": "1 page à la fois",
+        "capture_mode_two": "2 pages à la fois",
+        "capture_output_folder": "Dossier de sauvegarde",
+        "capture_save_to_working_folder": "Enregistrement direct dans le Working Folder",
+        "capture_choose_folder": "Choisir un dossier",
+        "capture_capture_now": "Capturer maintenant",
+        "capture_start_voice": "Démarrer la voix",
+        "capture_stop_voice": "Arrêter la voix",
+        "capture_prefix": "Préfixe de nommage",
+        "capture_prefix_hint": "Optionnel. Exemple: livre-a",
+        "capture_counter": "Captures réalisées",
+        "capture_beep": "Bip audio après capture",
+        "capture_browser_status": "Compatibilité navigateur",
+        "capture_browser_status_unknown": "Navigateur détecté: inconnu.",
+        "capture_browser_status_chrome": "Navigateur détecté: Chrome / Chromium. Support recommandé pour caméra, dossier et voix.",
+        "capture_browser_status_safari": "Navigateur détecté: Safari. Caméra généralement OK, mais dossier et voix peuvent être limités.",
+        "capture_browser_status_firefox": "Navigateur détecté: Firefox. Caméra généralement OK, mais dossier et voix peuvent être limités.",
+        "capture_browser_status_generic": "Navigateur détecté: {name}. Certaines APIs peuvent varier selon la version.",
+        "capture_voice_hint": "Mot déclencheur: “next” (anglais).",
+        "capture_alignment_hint": "En mode 2 pages, aligne la reliure du livre sur la ligne centrale.",
+        "capture_browser_note": "Conseil: Chrome est recommandé pour la sélection de dossier. Safari peut fonctionner pour la caméra mais pas forcément pour le choix du dossier.",
+        "capture_status_ready": "Prêt. Active la caméra puis sélectionne la source souhaitée.",
+        "capture_status_browser_unsupported": "Ce navigateur ne supporte pas toutes les API nécessaires (caméra ou reconnaissance vocale).",
+        "capture_status_open_new_tab": "La Capture App s'ouvre maintenant dans un nouvel onglet.",
+        "capture_voice_browser_not_supported": "La commande vocale n'est pas fiable sur ce navigateur. Utilise Chrome pour le mot déclencheur 'next'.",
+        "capture_voice_network_retry": "Erreur réseau de reconnaissance vocale. Nouvelle tentative automatique...",
+        "capture_voice_network_unavailable": "Erreur réseau de reconnaissance vocale persistante. Vérifie la connexion Internet ou passe sur Chrome.",
+        "capture_voice_permission_blocked": "Micro bloqué. Autorise le micro dans le navigateur puis relance la voix.",
+        "capture_voice_engine": "Moteur vocal",
+        "capture_voice_engine_idle": "Arrêté",
+        "capture_voice_engine_listening": "En écoute",
+        "capture_voice_engine_processing": "Analyse audio...",
+        "capture_voice_engine_error": "Erreur",
         "flash_no_file_received": "Aucun fichier reçu.",
         "flash_no_page_save": "Aucune page à mettre à jour.",
         "flash_text_updated": "Texte mis à jour pour {name}.",
@@ -86,8 +137,6 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Aucune page à valider.",
         "flash_page_validated": "Page validée: {name}.",
         "flash_page_saved_validated": "Page sauvegardée et validée: {name}.",
-        "flash_downsize_applied": "Image réduite pour l'archive: {before_kb} KB -> {after_kb} KB (cible {target_kb} KB).",
-        "flash_downsize_failed": "Réduction impossible pour {name}: {reason}",
         "flash_undo_done": "Dernière validation annulée ({count} fichier(s) restauré(s)).",
         "flash_undo_none": "Aucune validation à annuler.",
         "flash_undo_conflict": "Annulation impossible: {count} validation(s) bloquée(s) car le nom existe déjà dans le dossier actif.",
@@ -116,8 +165,6 @@ TRANSLATIONS = {
         "undo": "Undo last validation",
         "ocr_language": "OCR language",
         "ocr_lang_auto": "Automatic (site language)",
-        "downsize_validated": "Downsize validated images",
-        "downsize_target": "Target size",
         "total_pages": "Total pages",
         "validated": "Validated",
         "progress": "Progress",
@@ -140,6 +187,58 @@ TRANSLATIONS = {
         "flash_uploaded_images": "{count} image(s) imported.",
         "flash_auto_ocr_suffix": " Auto OCR applied.",
         "flash_skipped_files": "{count} file(s) skipped (duplicate or unsupported format).",
+        "launch_capture_app": "Open Capture App",
+        "working_folder": "Working Folder",
+        "working_folder_hint": "Absolute path of the shared working folder",
+        "choose_working_folder": "Choose working folder",
+        "apply_working_folder": "Apply",
+        "flash_working_folder_updated": "Working Folder updated: {path}",
+        "flash_working_folder_invalid": "Invalid Working Folder: {error}",
+        "flash_working_folder_picker_unavailable": "Finder folder picker is unavailable on this OS.",
+        "flash_working_folder_picker_failed": "Could not open Finder folder picker: {error}",
+        "capture_title": "Capture App",
+        "capture_subtitle": "Browser-based capture with camera selection, voice trigger, and 2-page split.",
+        "capture_back": "Back to OCR Book Quick Compare",
+        "capture_enable_camera": "Enable camera",
+        "capture_refresh_cameras": "Refresh cameras",
+        "capture_camera": "Camera",
+        "capture_mode": "Mode",
+        "capture_rotation": "Rotation",
+        "capture_rotate_left": "↺ -90°",
+        "capture_rotate_right": "↻ +90°",
+        "capture_mode_one": "1 page at a time",
+        "capture_mode_two": "2 pages at a time",
+        "capture_output_folder": "Save folder",
+        "capture_save_to_working_folder": "Direct save into Working Folder",
+        "capture_choose_folder": "Choose folder",
+        "capture_capture_now": "Capture now",
+        "capture_start_voice": "Start voice",
+        "capture_stop_voice": "Stop voice",
+        "capture_prefix": "File prefix",
+        "capture_prefix_hint": "Optional. Example: book-a",
+        "capture_counter": "Captures taken",
+        "capture_beep": "Audio beep after capture",
+        "capture_browser_status": "Browser compatibility",
+        "capture_browser_status_unknown": "Detected browser: unknown.",
+        "capture_browser_status_chrome": "Detected browser: Chrome / Chromium. Recommended support for camera, folder picker, and voice.",
+        "capture_browser_status_safari": "Detected browser: Safari. Camera is usually OK, but folder picker and voice may be limited.",
+        "capture_browser_status_firefox": "Detected browser: Firefox. Camera is usually OK, but folder picker and voice may be limited.",
+        "capture_browser_status_generic": "Detected browser: {name}. Some APIs may vary depending on the version.",
+        "capture_voice_hint": "Trigger word: “next” (English).",
+        "capture_alignment_hint": "In 2-page mode, align the book spine with the center line.",
+        "capture_browser_note": "Tip: Chrome is recommended for folder selection. Safari may work for camera access but not always for folder picking.",
+        "capture_status_ready": "Ready. Enable the camera, then choose the source you want.",
+        "capture_status_browser_unsupported": "This browser does not support all required APIs (camera or speech recognition).",
+        "capture_status_open_new_tab": "Capture App now opens in a new browser tab.",
+        "capture_voice_browser_not_supported": "Voice trigger is not reliable on this browser. Use Chrome for the 'next' keyword.",
+        "capture_voice_network_retry": "Speech recognition network error. Retrying automatically...",
+        "capture_voice_network_unavailable": "Speech recognition network error keeps happening. Check Internet access or switch to Chrome.",
+        "capture_voice_permission_blocked": "Microphone is blocked. Allow microphone access in the browser and retry voice.",
+        "capture_voice_engine": "Voice engine",
+        "capture_voice_engine_idle": "Stopped",
+        "capture_voice_engine_listening": "Listening",
+        "capture_voice_engine_processing": "Processing audio...",
+        "capture_voice_engine_error": "Error",
         "flash_no_file_received": "No file received.",
         "flash_no_page_save": "No page available to update.",
         "flash_text_updated": "Text updated for {name}.",
@@ -151,8 +250,6 @@ TRANSLATIONS = {
         "flash_no_page_validate": "No page available to validate.",
         "flash_page_validated": "Page validated: {name}.",
         "flash_page_saved_validated": "Page saved and validated: {name}.",
-        "flash_downsize_applied": "Image downsized for archive: {before_kb} KB -> {after_kb} KB (target {target_kb} KB).",
-        "flash_downsize_failed": "Could not downsize {name}: {reason}",
         "flash_undo_done": "Last validation cancelled ({count} file(s) restored).",
         "flash_undo_none": "No validation to undo.",
         "flash_undo_conflict": "Undo blocked: {count} validation(s) could not be restored because the name already exists in active files.",
@@ -181,8 +278,6 @@ TRANSLATIONS = {
         "undo": "Annulla l'ultima validazione",
         "ocr_language": "Lingua OCR",
         "ocr_lang_auto": "Automatico (lingua del sito)",
-        "downsize_validated": "Riduci immagini validate",
-        "downsize_target": "Dimensione target",
         "total_pages": "Pagine totali",
         "validated": "Convalidate",
         "progress": "Avanzamento",
@@ -205,6 +300,58 @@ TRANSLATIONS = {
         "flash_uploaded_images": "{count} immagine/i importata/e.",
         "flash_auto_ocr_suffix": " OCR automatico applicato.",
         "flash_skipped_files": "{count} file ignorato/i (duplicato o formato non supportato).",
+        "launch_capture_app": "Apri Capture App",
+        "working_folder": "Working Folder",
+        "working_folder_hint": "Percorso assoluto della cartella di lavoro condivisa",
+        "choose_working_folder": "Scegli cartella lavoro",
+        "apply_working_folder": "Applica",
+        "flash_working_folder_updated": "Working Folder aggiornata: {path}",
+        "flash_working_folder_invalid": "Working Folder non valida: {error}",
+        "flash_working_folder_picker_unavailable": "Il selettore cartelle Finder non è disponibile su questo sistema.",
+        "flash_working_folder_picker_failed": "Impossibile aprire il selettore Finder: {error}",
+        "capture_title": "Capture App",
+        "capture_subtitle": "Acquisizione nel browser con selezione camera, trigger vocale e separazione 2 pagine.",
+        "capture_back": "Torna a OCR Book Quick Compare",
+        "capture_enable_camera": "Attiva la camera",
+        "capture_refresh_cameras": "Aggiorna camere",
+        "capture_camera": "Camera",
+        "capture_mode": "Modalità",
+        "capture_rotation": "Rotazione",
+        "capture_rotate_left": "↺ -90°",
+        "capture_rotate_right": "↻ +90°",
+        "capture_mode_one": "1 pagina alla volta",
+        "capture_mode_two": "2 pagine alla volta",
+        "capture_output_folder": "Cartella di salvataggio",
+        "capture_save_to_working_folder": "Salvataggio diretto nella Working Folder",
+        "capture_choose_folder": "Scegli cartella",
+        "capture_capture_now": "Acquisisci ora",
+        "capture_start_voice": "Avvia voce",
+        "capture_stop_voice": "Ferma voce",
+        "capture_prefix": "Prefisso file",
+        "capture_prefix_hint": "Opzionale. Esempio: libro-a",
+        "capture_counter": "Acquisizioni effettuate",
+        "capture_beep": "Bip audio dopo l'acquisizione",
+        "capture_browser_status": "Compatibilità browser",
+        "capture_browser_status_unknown": "Browser rilevato: sconosciuto.",
+        "capture_browser_status_chrome": "Browser rilevato: Chrome / Chromium. Supporto consigliato per camera, cartella e voce.",
+        "capture_browser_status_safari": "Browser rilevato: Safari. La camera di solito funziona, ma cartella e voce possono essere limitate.",
+        "capture_browser_status_firefox": "Browser rilevato: Firefox. La camera di solito funziona, ma cartella e voce possono essere limitate.",
+        "capture_browser_status_generic": "Browser rilevato: {name}. Alcune API possono variare in base alla versione.",
+        "capture_voice_hint": "Parola trigger: “next” (inglese).",
+        "capture_alignment_hint": "In modalità 2 pagine, allinea il dorso del libro alla linea centrale.",
+        "capture_browser_note": "Suggerimento: Chrome è consigliato per la selezione della cartella. Safari può funzionare per la camera ma non sempre per la scelta della cartella.",
+        "capture_status_ready": "Pronto. Attiva la camera, poi scegli la sorgente desiderata.",
+        "capture_status_browser_unsupported": "Questo browser non supporta tutte le API richieste (camera o riconoscimento vocale).",
+        "capture_status_open_new_tab": "Capture App ora si apre in una nuova scheda del browser.",
+        "capture_voice_browser_not_supported": "Il trigger vocale non è affidabile su questo browser. Usa Chrome per la parola 'next'.",
+        "capture_voice_network_retry": "Errore di rete nel riconoscimento vocale. Nuovo tentativo automatico...",
+        "capture_voice_network_unavailable": "Errore di rete persistente nel riconoscimento vocale. Verifica Internet o usa Chrome.",
+        "capture_voice_permission_blocked": "Microfono bloccato. Consenti l'accesso al microfono nel browser e riprova.",
+        "capture_voice_engine": "Motore vocale",
+        "capture_voice_engine_idle": "Fermo",
+        "capture_voice_engine_listening": "In ascolto",
+        "capture_voice_engine_processing": "Analisi audio...",
+        "capture_voice_engine_error": "Errore",
         "flash_no_file_received": "Nessun file ricevuto.",
         "flash_no_page_save": "Nessuna pagina da aggiornare.",
         "flash_text_updated": "Testo aggiornato per {name}.",
@@ -216,8 +363,6 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Nessuna pagina da convalidare.",
         "flash_page_validated": "Pagina convalidata: {name}.",
         "flash_page_saved_validated": "Pagina salvata e convalidata: {name}.",
-        "flash_downsize_applied": "Immagine ridotta per archivio: {before_kb} KB -> {after_kb} KB (target {target_kb} KB).",
-        "flash_downsize_failed": "Riduzione non riuscita per {name}: {reason}",
         "flash_undo_done": "Ultima validazione annullata ({count} file ripristinato/i).",
         "flash_undo_none": "Nessuna validazione da annullare.",
         "flash_undo_conflict": "Annullamento impossibile: {count} validazione/i bloccata/e perché il nome esiste già tra i file attivi.",
@@ -246,8 +391,6 @@ TRANSLATIONS = {
         "undo": "Letzte Validierung rückgängig",
         "ocr_language": "OCR-Sprache",
         "ocr_lang_auto": "Automatisch (Seitensprache)",
-        "downsize_validated": "Validierte Bilder verkleinern",
-        "downsize_target": "Zielgroesse",
         "total_pages": "Seiten gesamt",
         "validated": "Validiert",
         "progress": "Fortschritt",
@@ -270,6 +413,58 @@ TRANSLATIONS = {
         "flash_uploaded_images": "{count} Bild(er) importiert.",
         "flash_auto_ocr_suffix": " Auto-OCR angewendet.",
         "flash_skipped_files": "{count} Datei(en) übersprungen (Duplikat oder nicht unterstütztes Format).",
+        "launch_capture_app": "Capture App öffnen",
+        "working_folder": "Working Folder",
+        "working_folder_hint": "Absoluter Pfad des gemeinsamen Arbeitsordners",
+        "choose_working_folder": "Arbeitsordner wählen",
+        "apply_working_folder": "Anwenden",
+        "flash_working_folder_updated": "Working Folder aktualisiert: {path}",
+        "flash_working_folder_invalid": "Ungültiger Working Folder: {error}",
+        "flash_working_folder_picker_unavailable": "Der Finder-Ordnerdialog ist auf diesem System nicht verfügbar.",
+        "flash_working_folder_picker_failed": "Finder-Ordnerdialog konnte nicht geöffnet werden: {error}",
+        "capture_title": "Capture App",
+        "capture_subtitle": "Browserbasierte Aufnahme mit Kameraauswahl, Sprach-Trigger und 2-Seiten-Trennung.",
+        "capture_back": "Zurück zu OCR Book Quick Compare",
+        "capture_enable_camera": "Kamera aktivieren",
+        "capture_refresh_cameras": "Kameras aktualisieren",
+        "capture_camera": "Kamera",
+        "capture_mode": "Modus",
+        "capture_rotation": "Drehung",
+        "capture_rotate_left": "↺ -90°",
+        "capture_rotate_right": "↻ +90°",
+        "capture_mode_one": "1 Seite gleichzeitig",
+        "capture_mode_two": "2 Seiten gleichzeitig",
+        "capture_output_folder": "Speicherordner",
+        "capture_save_to_working_folder": "Direktes Speichern im Working Folder",
+        "capture_choose_folder": "Ordner wählen",
+        "capture_capture_now": "Jetzt aufnehmen",
+        "capture_start_voice": "Sprache starten",
+        "capture_stop_voice": "Sprache stoppen",
+        "capture_prefix": "Dateipräfix",
+        "capture_prefix_hint": "Optional. Beispiel: buch-a",
+        "capture_counter": "Erfasste Aufnahmen",
+        "capture_beep": "Signalton nach Aufnahme",
+        "capture_browser_status": "Browser-Kompatibilität",
+        "capture_browser_status_unknown": "Erkannter Browser: unbekannt.",
+        "capture_browser_status_chrome": "Erkannter Browser: Chrome / Chromium. Empfohlene Unterstützung für Kamera, Ordnerwahl und Sprache.",
+        "capture_browser_status_safari": "Erkannter Browser: Safari. Kamera funktioniert meist, aber Ordnerwahl und Sprache können eingeschränkt sein.",
+        "capture_browser_status_firefox": "Erkannter Browser: Firefox. Kamera funktioniert meist, aber Ordnerwahl und Sprache können eingeschränkt sein.",
+        "capture_browser_status_generic": "Erkannter Browser: {name}. Manche APIs können je nach Version variieren.",
+        "capture_voice_hint": "Auslösewort: “next” (Englisch).",
+        "capture_alignment_hint": "Im 2-Seiten-Modus den Buchrücken an der Mittellinie ausrichten.",
+        "capture_browser_note": "Tipp: Chrome wird für die Ordnerauswahl empfohlen. Safari kann für die Kamera funktionieren, aber nicht immer für die Ordnerauswahl.",
+        "capture_status_ready": "Bereit. Kamera aktivieren und dann die gewünschte Quelle wählen.",
+        "capture_status_browser_unsupported": "Dieser Browser unterstützt nicht alle erforderlichen APIs (Kamera oder Spracherkennung).",
+        "capture_status_open_new_tab": "Capture App öffnet sich jetzt in einem neuen Browser-Tab.",
+        "capture_voice_browser_not_supported": "Sprach-Trigger ist in diesem Browser nicht zuverlässig. Verwende Chrome für das Schlüsselwort 'next'.",
+        "capture_voice_network_retry": "Netzwerkfehler bei der Spracherkennung. Automatischer neuer Versuch...",
+        "capture_voice_network_unavailable": "Anhaltender Netzwerkfehler bei der Spracherkennung. Internet prüfen oder Chrome verwenden.",
+        "capture_voice_permission_blocked": "Mikrofon blockiert. Mikrofonzugriff im Browser erlauben und erneut starten.",
+        "capture_voice_engine": "Sprachmodul",
+        "capture_voice_engine_idle": "Gestoppt",
+        "capture_voice_engine_listening": "Hört zu",
+        "capture_voice_engine_processing": "Audio wird analysiert...",
+        "capture_voice_engine_error": "Fehler",
         "flash_no_file_received": "Keine Datei empfangen.",
         "flash_no_page_save": "Keine Seite zum Aktualisieren verfügbar.",
         "flash_text_updated": "Text für {name} aktualisiert.",
@@ -281,8 +476,6 @@ TRANSLATIONS = {
         "flash_no_page_validate": "Keine Seite zum Validieren verfügbar.",
         "flash_page_validated": "Seite validiert: {name}.",
         "flash_page_saved_validated": "Seite gespeichert und validiert: {name}.",
-        "flash_downsize_applied": "Bild fuers Archiv verkleinert: {before_kb} KB -> {after_kb} KB (Ziel {target_kb} KB).",
-        "flash_downsize_failed": "Verkleinerung fehlgeschlagen fuer {name}: {reason}",
         "flash_undo_done": "Letzte Validierung rückgängig ({count} Datei(en) wiederhergestellt).",
         "flash_undo_none": "Keine Validierung zum Rückgängigmachen.",
         "flash_undo_conflict": "Rückgängig blockiert: {count} Validierung(en) konnten nicht wiederhergestellt werden, da der Name bereits bei aktiven Dateien existiert.",
@@ -326,10 +519,6 @@ class PairRecord:
     def text_length(self) -> int:
         return len(self.text_content.strip())
 
-    @property
-    def image_size_kb(self) -> int:
-        return max(1, (self.image_path.stat().st_size + 1023) // 1024)
-
 
 @dataclass
 class ViewState:
@@ -340,8 +529,6 @@ class ViewState:
     thumbnail_page: int = 1
     lang: str = "fr"
     ocr_lang: str = ""
-    downsize_enabled: bool = False
-    downsize_kb: int = DOWNSIZE_TARGET_DEFAULT_KB
 
 
 
@@ -367,6 +554,36 @@ def image_sort_key(image_path: Path) -> tuple[float, str]:
 
 def text_path_for(image_path: Path) -> Path:
     return image_path.with_suffix(".txt")
+
+
+def unique_image_destination(images_dir: Path, filename: str) -> Path:
+    candidate_name = Path(filename).name
+    base = Path(candidate_name).stem
+    suffix = Path(candidate_name).suffix.lower()
+    if suffix not in IMAGE_EXTENSIONS:
+        suffix = ".jpg"
+
+    candidate = images_dir / f"{base}{suffix}"
+    index = 1
+    while candidate.exists() or text_path_for(candidate).exists():
+        candidate = images_dir / f"{base}-{index}{suffix}"
+        index += 1
+    return candidate
+
+
+def save_capture_uploads(files: list, images_dir: Path) -> list[str]:
+    saved_names: list[str] = []
+    for storage in files:
+        raw_name = (storage.filename or "").strip()
+        if not raw_name:
+            continue
+
+        destination = unique_image_destination(images_dir, raw_name)
+        storage.save(str(destination))
+        text_path_for(destination).write_text("", encoding="utf-8")
+        saved_names.append(destination.name)
+
+    return saved_names
 
 
 
@@ -397,20 +614,6 @@ def normalize_ocr_lang(ocr_lang: str) -> str:
     return ""
 
 
-def normalize_toggle(value) -> bool:
-    if isinstance(value, bool):
-        return value
-    return str(value or "").strip().lower() in {"1", "true", "yes", "on"}
-
-
-def normalize_downsize_kb(value) -> int:
-    try:
-        parsed = int(value)
-    except (TypeError, ValueError):
-        return DOWNSIZE_TARGET_DEFAULT_KB
-    return max(DOWNSIZE_TARGET_MIN_KB, min(DOWNSIZE_TARGET_MAX_KB, parsed))
-
-
 def resolve_ocr_lang(view_state: ViewState, configured_ocr_lang: str) -> str:
     if view_state.ocr_lang:
         return view_state.ocr_lang
@@ -438,8 +641,6 @@ def build_view_state(source) -> ViewState:
         thumbnail_page=max(1, int(source.get("thumb_page", 1) or 1)),
         lang=normalize_lang(source.get("lang") or "fr"),
         ocr_lang=normalize_ocr_lang(source.get("ocr_lang") or ""),
-        downsize_enabled=normalize_toggle(source.get("downsize_enabled")),
-        downsize_kb=normalize_downsize_kb(source.get("downsize_kb")),
     )
 
 
@@ -452,8 +653,6 @@ def build_index_params(view_state: ViewState, selected_name: Optional[str] = Non
         "thumb_page": view_state.thumbnail_page,
         "lang": view_state.lang,
         "ocr_lang": view_state.ocr_lang,
-        "downsize_enabled": "1" if view_state.downsize_enabled else "",
-        "downsize_kb": view_state.downsize_kb,
     }
 
     if file_name:
@@ -602,60 +801,6 @@ def move_pair_to_done(image_path: Path, text_path: Path, check_done_dir: Path) -
     shutil.move(str(text_path), str(text_target))
 
 
-def downsize_image_for_archive(image_path: Path, target_kb: int) -> tuple[bool, int, int]:
-    if Image is None or ImageOps is None:
-        raise RuntimeError("Pillow is not installed in the current environment.")
-
-    bounded_target_kb = normalize_downsize_kb(target_kb)
-    target_bytes = bounded_target_kb * 1024
-    before_bytes = image_path.stat().st_size
-    if before_bytes <= target_bytes:
-        before_kb = round(before_bytes / 1024)
-        return False, before_kb, before_kb
-
-    with Image.open(image_path) as opened:
-        corrected = ImageOps.exif_transpose(opened)
-        if corrected.mode != "RGB":
-            corrected = corrected.convert("RGB")
-        original = corrected.copy()
-
-    best_payload: Optional[bytes] = None
-    best_size: Optional[int] = None
-
-    for scale in (1.0, 0.92, 0.86, 0.8, 0.74):
-        if scale < 1.0:
-            resized = original.resize(
-                (
-                    max(1, int(original.width * scale)),
-                    max(1, int(original.height * scale)),
-                ),
-                Image.Resampling.LANCZOS,
-            )
-        else:
-            resized = original
-
-        for quality in (92, 85, 78, 72, 66, 60, 54, 48, 42, 36):
-            buffer = BytesIO()
-            resized.save(buffer, format="JPEG", quality=quality, optimize=True, progressive=True)
-            payload = buffer.getvalue()
-            size = len(payload)
-
-            if best_size is None or size < best_size:
-                best_size = size
-                best_payload = payload
-
-            if size <= target_bytes:
-                image_path.write_bytes(payload)
-                return True, round(before_bytes / 1024), round(size / 1024)
-
-    if best_payload is not None and best_size is not None and best_size < before_bytes:
-        image_path.write_bytes(best_payload)
-        return True, round(before_bytes / 1024), round(best_size / 1024)
-
-    before_kb = round(before_bytes / 1024)
-    return False, before_kb, before_kb
-
-
 
 def undo_last_validation(check_done_dir: Path, images_dir: Path, count: int = 1) -> tuple[int, int]:
     undone_count = 0
@@ -742,7 +887,11 @@ def _paddle_language_code(language: str) -> str:
 @lru_cache(maxsize=4)
 def get_paddle_ocr(language: str):
     if PaddleOCR is None:
-        raise RuntimeError("Paddle OCR is not installed. Install paddleocr to enable this feature.")
+        error_suffix = f" ({PADDLEOCR_IMPORT_ERROR})" if PADDLEOCR_IMPORT_ERROR else ""
+        raise RuntimeError(
+            "Paddle OCR is not installed or failed to import. "
+            f"Install/fix paddleocr dependencies to enable this feature{error_suffix}."
+        )
 
     return PaddleOCR(use_textline_orientation=True, lang=_paddle_language_code(language))
 
@@ -800,6 +949,44 @@ def run_ocr_for_image(image_path: Path, language: str) -> str:
         raise RuntimeError(f"Paddle OCR failed: {exc}") from exc
 
 
+def contains_trigger_word(text: str, trigger: str = "next") -> bool:
+    normalized_text = (text or "").strip().lower()
+    normalized_trigger = (trigger or "next").strip().lower()
+    if not normalized_text or not normalized_trigger:
+        return False
+    return normalized_trigger in normalized_text.split() or normalized_trigger in normalized_text
+
+
+@lru_cache(maxsize=1)
+def get_capture_vosk_model(model_path: str):
+    if VoskModel is None:
+        raise RuntimeError("Vosk is not installed")
+    return VoskModel(model_path)
+
+
+def transcribe_capture_wav(audio_bytes: bytes, model_dir: Path) -> str:
+    if KaldiRecognizer is None or VoskModel is None:
+        raise RuntimeError("Vosk dependency is not available")
+    if not model_dir.exists():
+        raise RuntimeError(f"Vosk model not found at {model_dir}")
+
+    with wave.open(io.BytesIO(audio_bytes), "rb") as wav_file:
+        sample_width = wav_file.getsampwidth()
+        sample_rate = wav_file.getframerate()
+        channels = wav_file.getnchannels()
+        frame_data = wav_file.readframes(wav_file.getnframes())
+
+    if sample_width != 2:
+        raise RuntimeError("Unsupported WAV sample width (expected 16-bit PCM)")
+    if channels != 1:
+        raise RuntimeError("Unsupported WAV channel count (expected mono)")
+
+    recognizer = KaldiRecognizer(get_capture_vosk_model(str(model_dir)), float(sample_rate))
+    recognizer.AcceptWaveform(frame_data)
+    result = json.loads(recognizer.FinalResult() or "{}")
+    return str(result.get("text", "")).strip().lower()
+
+
 def create_app(test_config: Optional[dict] = None) -> Flask:
     base_dir = Path(__file__).resolve().parent
 
@@ -808,20 +995,39 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         SECRET_KEY=os.environ.get("OCR_COMPARE_SECRET", "dev-secret-change-me"),
         IMAGES_DIR=base_dir / "images",
         CHECK_DONE_DIR=base_dir / "images" / "check-done",
+        WORKING_FOLDER_STATE_FILE=base_dir / ".working-folder.txt",
         OCR_LANG=os.environ.get("OCR_LANG", ""),
         AUTO_OCR=os.environ.get("AUTO_OCR", "0").lower() in ("1", "true", "yes"),
         MAX_CONTENT_LENGTH=64 * 1024 * 1024,
         AUTOSAVE_INTERVAL_MS=1500,
+        CAPTURE_VOSK_MODEL_DIR=base_dir / "capture-app" / "models" / "vosk-model-small-en-us-0.15",
+        CAPTURE_MAX_AUDIO_BYTES=4 * 1024 * 1024,
     )
 
     if test_config:
         app.config.update(test_config)
 
-    app.config["IMAGES_DIR"] = Path(app.config["IMAGES_DIR"])
-    app.config["CHECK_DONE_DIR"] = Path(app.config["CHECK_DONE_DIR"])
+    def apply_working_folder(folder_path: Path) -> None:
+        resolved = Path(folder_path).expanduser().resolve()
+        resolved.mkdir(parents=True, exist_ok=True)
+        check_done = resolved / "check-done"
+        check_done.mkdir(parents=True, exist_ok=True)
+        app.config["IMAGES_DIR"] = resolved
+        app.config["CHECK_DONE_DIR"] = check_done
 
-    app.config["IMAGES_DIR"].mkdir(parents=True, exist_ok=True)
-    app.config["CHECK_DONE_DIR"].mkdir(parents=True, exist_ok=True)
+    configured_images_dir = Path(app.config["IMAGES_DIR"])
+    state_file = Path(app.config["WORKING_FOLDER_STATE_FILE"])
+
+    # In normal runs, restore last folder used by the user.
+    if not test_config and state_file.exists():
+        try:
+            persisted = state_file.read_text(encoding="utf-8").strip()
+            if persisted:
+                configured_images_dir = Path(persisted)
+        except OSError:
+            configured_images_dir = Path(app.config["IMAGES_DIR"])
+
+    apply_working_folder(configured_images_dir)
 
     def redirect_to_index(view_state: ViewState, selected_name: Optional[str] = None):
         return redirect(url_for("index", **build_index_params(view_state, selected_name)))
@@ -887,10 +1093,7 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             language_labels=LANGUAGE_LABELS,
             supported_ocr_langs=SUPPORTED_LANGS,
             effective_ocr_lang=effective_ocr_lang,
-            downsize_min_kb=DOWNSIZE_TARGET_MIN_KB,
-            downsize_max_kb=DOWNSIZE_TARGET_MAX_KB,
-            downsize_step_kb=DOWNSIZE_TARGET_STEP_KB,
-            downsize_presets=DOWNSIZE_TARGET_PRESETS_KB,
+            current_working_folder=str(images_dir),
             t=lambda key, **kwargs: tr(view_state.lang, key, **kwargs),
         )
 
@@ -925,6 +1128,86 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
             flash(tr(view_state.lang, "flash_no_file_received"), "info")
 
         return redirect_to_index(view_state, view_state.selected_name)
+
+    @app.post("/set-working-folder")
+    def set_working_folder():
+        view_state = build_view_state(request.form)
+        requested_folder = (request.form.get("working_folder") or "").strip()
+        if not requested_folder:
+            flash(tr(view_state.lang, "flash_working_folder_invalid", error="empty path"), "error")
+            return redirect_to_index(view_state, view_state.selected_name)
+
+        try:
+            new_folder = Path(requested_folder).expanduser().resolve()
+            new_folder.mkdir(parents=True, exist_ok=True)
+            check_done = new_folder / "check-done"
+            check_done.mkdir(parents=True, exist_ok=True)
+            app.config["IMAGES_DIR"] = new_folder
+            app.config["CHECK_DONE_DIR"] = check_done
+            if not app.testing:
+                Path(app.config["WORKING_FOLDER_STATE_FILE"]).write_text(str(new_folder), encoding="utf-8")
+        except OSError as exc:
+            flash(tr(view_state.lang, "flash_working_folder_invalid", error=str(exc)), "error")
+            return redirect_to_index(view_state, view_state.selected_name)
+
+        flash(tr(view_state.lang, "flash_working_folder_updated", path=str(new_folder)), "success")
+        return redirect_to_index(view_state, "")
+
+    @app.get("/pick-working-folder")
+    def pick_working_folder():
+        view_state = build_view_state(request.args)
+
+        if sys.platform != "darwin":
+            return (
+                jsonify(
+                    {
+                        "selected": False,
+                        "message": tr(view_state.lang, "flash_working_folder_picker_unavailable"),
+                    }
+                ),
+                501,
+            )
+
+        script = (
+            "try\n"
+            'POSIX path of (choose folder with prompt "Select Working Folder")\n'
+            "on error number -128\n"
+            'return ""\n'
+            "end try"
+        )
+
+        try:
+            result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True, check=False)
+        except OSError as exc:
+            return (
+                jsonify(
+                    {
+                        "selected": False,
+                        "message": tr(view_state.lang, "flash_working_folder_picker_failed", error=str(exc)),
+                    }
+                ),
+                500,
+            )
+
+        if result.returncode != 0:
+            raw_error = (result.stderr or result.stdout or "").strip() or f"exit {result.returncode}"
+            if "User canceled" in raw_error:
+                return jsonify({"selected": False, "cancelled": True})
+            return (
+                jsonify(
+                    {
+                        "selected": False,
+                        "message": tr(view_state.lang, "flash_working_folder_picker_failed", error=raw_error),
+                    }
+                ),
+                500,
+            )
+
+        selected_path = (result.stdout or "").strip()
+        if not selected_path:
+            return jsonify({"selected": False, "cancelled": True})
+
+        return jsonify({"selected": True, "path": selected_path})
 
     @app.post("/save")
     def save_text():
@@ -1018,31 +1301,6 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         remaining_records = filtered_records[:current_index] + filtered_records[current_index + 1 :]
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
 
-        if view_state.downsize_enabled:
-            try:
-                resized, before_kb, after_kb = downsize_image_for_archive(current_record.image_path, view_state.downsize_kb)
-                if resized:
-                    flash(
-                        tr(
-                            view_state.lang,
-                            "flash_downsize_applied",
-                            before_kb=before_kb,
-                            after_kb=after_kb,
-                            target_kb=view_state.downsize_kb,
-                        ),
-                        "info",
-                    )
-            except RuntimeError as exc:
-                flash(
-                    tr(
-                        view_state.lang,
-                        "flash_downsize_failed",
-                        name=current_record.image_name,
-                        reason=str(exc),
-                    ),
-                    "error",
-                )
-
         try:
             move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])
         except FileExistsError as exc:
@@ -1066,31 +1324,6 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         current_record.text_path.write_text(updated_text, encoding="utf-8")
         remaining_records = filtered_records[:current_index] + filtered_records[current_index + 1 :]
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
-
-        if view_state.downsize_enabled:
-            try:
-                resized, before_kb, after_kb = downsize_image_for_archive(current_record.image_path, view_state.downsize_kb)
-                if resized:
-                    flash(
-                        tr(
-                            view_state.lang,
-                            "flash_downsize_applied",
-                            before_kb=before_kb,
-                            after_kb=after_kb,
-                            target_kb=view_state.downsize_kb,
-                        ),
-                        "info",
-                    )
-            except RuntimeError as exc:
-                flash(
-                    tr(
-                        view_state.lang,
-                        "flash_downsize_failed",
-                        name=current_record.image_name,
-                        reason=str(exc),
-                    ),
-                    "error",
-                )
 
         try:
             move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])
@@ -1127,6 +1360,57 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
     @app.get("/page-image/<path:filename>")
     def page_image(filename: str):
         return send_from_directory(str(app.config["IMAGES_DIR"]), filename)
+
+    @app.get("/capture")
+    def capture_companion():
+        view_state = build_view_state(request.args)
+        return render_template(
+            "capture.html",
+            current_lang=view_state.lang,
+            view_state=view_state,
+            current_working_folder=str(app.config["IMAGES_DIR"]),
+            t=lambda key, **kwargs: tr(view_state.lang, key, **kwargs),
+        )
+
+    @app.post("/capture-save-images")
+    def capture_save_images():
+        uploaded_files = request.files.getlist("images")
+        if not uploaded_files:
+            return jsonify({"saved": 0, "filenames": [], "message": "No images received"}), 400
+
+        saved_names = save_capture_uploads(uploaded_files, app.config["IMAGES_DIR"])
+        if not saved_names:
+            return jsonify({"saved": 0, "filenames": [], "message": "No valid images received"}), 400
+
+        return jsonify({"saved": len(saved_names), "filenames": saved_names})
+
+    @app.post("/launch-capture-app")
+    def launch_capture_app():
+        view_state = build_view_state(request.form)
+        flash(tr(view_state.lang, "capture_status_open_new_tab"), "info")
+        return redirect(url_for("capture_companion", lang=view_state.lang))
+
+    @app.post("/capture-voice-detect")
+    def capture_voice_detect():
+        audio_file = request.files.get("audio")
+        if audio_file is None:
+            return jsonify({"detected": False, "message": "No audio payload received"}), 400
+
+        payload = audio_file.read()
+        if not payload:
+            return jsonify({"detected": False, "message": "Empty audio payload"}), 400
+        if len(payload) > int(app.config["CAPTURE_MAX_AUDIO_BYTES"]):
+            return jsonify({"detected": False, "message": "Audio payload too large"}), 413
+
+        try:
+            transcript = transcribe_capture_wav(payload, Path(app.config["CAPTURE_VOSK_MODEL_DIR"]))
+        except RuntimeError as exc:
+            return jsonify({"detected": False, "message": str(exc)}), 503
+        except wave.Error:
+            return jsonify({"detected": False, "message": "Invalid WAV payload"}), 400
+
+        detected = contains_trigger_word(transcript, trigger="next")
+        return jsonify({"detected": detected, "transcript": transcript})
 
     return app
 

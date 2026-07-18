@@ -44,6 +44,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const downsizeSlider = document.querySelector("[data-downsize-slider]");
     const downsizeValue = document.querySelector("[data-downsize-value]");
     const downsizePresetButtons = document.querySelectorAll("[data-downsize-preset]");
+    const workingFolderForm = document.querySelector(".working-folder-form");
+    const workingFolderInput = workingFolderForm?.querySelector('[name="working_folder"]');
+    const workingFolderLangInput = workingFolderForm?.querySelector('[name="lang"]');
+    const chooseWorkingFolderButton = workingFolderForm?.querySelector("[data-choose-working-folder]");
 
     const bodyDataset = document.body?.dataset || {};
     const i18n = {
@@ -62,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
         uploadReadyTemplate:
             bodyDataset.i18nUploadReady || "__COUNT__ file(s) ready. Drop more files or release to import.",
         dropzoneHint: bodyDataset.i18nDropzoneHint || 'Drop .jpg/.jpeg here or click to select.',
+        workingFolderPickerErrorTemplate:
+            bodyDataset.i18nWorkingFolderPickerError || "Could not open Finder folder picker: __ERROR__",
     };
 
     let autosaveTimer = null;
@@ -298,6 +304,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateDownsizeUi();
                 downsizeForm.requestSubmit();
             });
+        });
+    }
+
+    if (workingFolderForm && workingFolderInput && chooseWorkingFolderButton) {
+        chooseWorkingFolderButton.addEventListener("click", async () => {
+            const lang = workingFolderLangInput?.value || "fr";
+            chooseWorkingFolderButton.disabled = true;
+
+            try {
+                const response = await fetch(`/pick-working-folder?lang=${encodeURIComponent(lang)}`);
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    const message = payload.message || i18n.workingFolderPickerErrorTemplate.replace("__ERROR__", `HTTP ${response.status}`);
+                    window.alert(message);
+                    return;
+                }
+
+                if (payload.selected && payload.path) {
+                    workingFolderInput.value = payload.path;
+                    return;
+                }
+
+                if (payload.message) {
+                    window.alert(payload.message);
+                }
+            } catch (error) {
+                const fallback = i18n.workingFolderPickerErrorTemplate.replace("__ERROR__", String(error));
+                window.alert(fallback);
+            } finally {
+                chooseWorkingFolderButton.disabled = false;
+            }
         });
     }
 

@@ -15,7 +15,8 @@
       data-i18n-confirm-validate-next-dirty="{{ t('js_confirm_validate_next_dirty') }}"
       data-i18n-confirm-ocr-overwrite="{{ t('js_confirm_ocr_overwrite') }}"
       data-i18n-upload-ready="{{ t('js_upload_ready', count='__COUNT__') }}"
-      data-i18n-dropzone-hint="{{ t('dropzone_hint') }}">
+      data-i18n-dropzone-hint="{{ t('dropzone_hint') }}"
+      data-i18n-working-folder-picker-error="{{ t('flash_working_folder_picker_failed', error='__ERROR__') }}">
 <div class="page">
     <header class="topbar">
         <div class="title-block">
@@ -37,6 +38,15 @@
                     <label><input type="checkbox" name="auto_ocr" value="1"> {{ t('auto_ocr') }}</label>
                 </div>
             </form>
+            <form class="working-folder-form" action="{{ url_for('set_working_folder') }}" method="post">
+                <input type="hidden" name="lang" value="{{ current_lang }}">
+                <button type="button" class="secondary" data-choose-working-folder>{{ t('choose_working_folder') }}</button>
+                <label>
+                    {{ t('working_folder') }}
+                    <input type="text" name="working_folder" value="{{ current_working_folder }}" placeholder="{{ t('working_folder_hint') }}">
+                </label>
+                <button type="submit" class="secondary">{{ t('apply_working_folder') }}</button>
+            </form>
             <div class="actions">
                 <form action="{{ url_for('create_texts') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
@@ -45,6 +55,7 @@
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('create_txt') }}</button>
                 </form>
+                <a href="{{ url_for('capture_companion', lang=current_lang) }}" class="button-link" target="_blank" rel="noopener">{{ t('launch_capture_app') }}</a>
                 <a href="{{ url_for('export_texts') }}" class="button-link">{{ t('export') }}</a>
                 {% if done_count > 0 %}
                 <form action="{{ url_for('undo_validation') }}" method="post">

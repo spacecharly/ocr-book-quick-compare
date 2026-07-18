@@ -1,9 +1,11 @@
 .venv/
+capture-app/.venv/
 __pycache__/
 .pytest_cache/
 *.pyc
 .DS_Store
 .idea/
+.working-folder.txt
 
 # Local OCR test assets (never commit)
 images/**

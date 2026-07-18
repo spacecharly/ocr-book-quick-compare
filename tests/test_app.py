@@ -359,6 +359,16 @@ class OCRCompareAppTests(unittest.TestCase):
         response = self.client.post("/capture-voice-detect", data={}, content_type="multipart/form-data")
         self.assertEqual(response.status_code, 400)
 
+    def test_index_handles_invalid_utf8_text_file(self) -> None:
+        image_path = self.create_image("bad-encoding.jpg", 100)
+        text_path = image_path.with_suffix(".txt")
+        text_path.write_bytes(b"line 1\ninvalid byte: \xb0\n")
+
+        response = self.client.get("/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("bad-encoding.jpg", response.get_data(as_text=True))
+
     def test_pick_working_folder_returns_unavailable_on_non_macos(self) -> None:
         with patch("app.sys.platform", "linux"):
             response = self.client.get("/pick-working-folder?lang=en")
@@ -396,6 +406,35 @@ class OCRCompareAppTests(unittest.TestCase):
         saved_image = self.images_dir / saved_name
         self.assertTrue(saved_image.exists())
         self.assertTrue(saved_image.with_suffix(".txt").exists())
+
+    def test_index_ignores_hidden_sidecar_pairs(self) -> None:
+        self.create_image("visible.jpg", 100).with_suffix(".txt").write_text("ok", encoding="utf-8")
+        hidden_image = self.images_dir / ". _broken.jpg".replace(" ", "")
+        hidden_text = self.images_dir / ". _broken.txt".replace(" ", "")
+        hidden_image.write_bytes(b"not-an-image")
+        hidden_text.write_bytes(b"\xb0\xb0\xb0")
+
+        response = self.client.get("/")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("visible.jpg", html)
+        self.assertNotIn("._broken.jpg", html)
+
+    def test_capture_save_images_cleans_hidden_sidecars(self) -> None:
+        sidecar = self.images_dir / "._temp.jpg"
+        sidecar.write_bytes(b"appledouble")
+
+        response = self.client.post(
+            "/capture-save-images",
+            data={"images": [(io.BytesIO(b"jpeg-bytes"), "scan2.jpg")]},
+            content_type="multipart/form-data",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.get_json()
+        self.assertGreaterEqual(payload.get("removed_sidecars", 0), 1)
+        self.assertFalse(sidecar.exists())
 
 
 if __name__ == "__main__":

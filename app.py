@@ -533,12 +533,18 @@ class ViewState:
 
 
 def is_supported_image(file_path: Path) -> bool:
-    return file_path.is_file() and file_path.suffix.lower() in IMAGE_EXTENSIONS
+    return file_path.is_file() and not is_hidden_sidecar(file_path) and file_path.suffix.lower() in IMAGE_EXTENSIONS
 
 
 
 def is_supported_image_name(filename: str) -> bool:
-    return Path(filename).suffix.lower() in IMAGE_EXTENSIONS
+    candidate = Path(filename)
+    return candidate.suffix.lower() in IMAGE_EXTENSIONS and not candidate.name.startswith(".")
+
+
+def is_hidden_sidecar(file_path: Path) -> bool:
+    name = file_path.name
+    return name.startswith("._") or (name.startswith(".") and name != ".")
 
 
 
@@ -584,6 +590,21 @@ def save_capture_uploads(files: list, images_dir: Path) -> list[str]:
         saved_names.append(destination.name)
 
     return saved_names
+
+
+def cleanup_capture_sidecars(images_dir: Path) -> int:
+    removed = 0
+    for path in images_dir.iterdir():
+        if not path.is_file():
+            continue
+        if not is_hidden_sidecar(path):
+            continue
+        try:
+            path.unlink()
+            removed += 1
+        except OSError:
+            continue
+    return removed
 
 
 
@@ -682,7 +703,7 @@ def get_pending_records(images_dir: Path) -> tuple[list[PairRecord], list[Path]]
             PairRecord(
                 image_path=image_path,
                 text_path=text_path,
-                text_content=text_path.read_text(encoding="utf-8"),
+                text_content=read_text_file_safe(text_path),
                 image_mtime=image_path.stat().st_mtime,
             )
         )
@@ -690,6 +711,15 @@ def get_pending_records(images_dir: Path) -> tuple[list[PairRecord], list[Path]]
     records.sort(key=lambda record: (record.image_mtime, record.image_name.casefold()))
     missing_texts.sort(key=image_sort_key)
     return records, missing_texts
+
+
+def read_text_file_safe(text_path: Path) -> str:
+    """Read OCR text files robustly even when bytes are not valid UTF-8."""
+    try:
+        return text_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        # Keep the page visible instead of crashing the whole UI.
+        return text_path.read_bytes().decode("utf-8", errors="replace")
 
 
 
@@ -1382,7 +1412,9 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         if not saved_names:
             return jsonify({"saved": 0, "filenames": [], "message": "No valid images received"}), 400
 
-        return jsonify({"saved": len(saved_names), "filenames": saved_names})
+        removed_sidecars = cleanup_capture_sidecars(app.config["IMAGES_DIR"])
+
+        return jsonify({"saved": len(saved_names), "filenames": saved_names, "removed_sidecars": removed_sidecars})
 
     @app.post("/launch-capture-app")
     def launch_capture_app():

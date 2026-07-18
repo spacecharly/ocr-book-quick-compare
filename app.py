@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
+from PIL import Image
 
 try:
     from paddleocr import PaddleOCR
@@ -868,7 +869,65 @@ def save_uploaded_images(files: list, images_dir: Path, auto_ocr: bool = False, 
 
 
 
-def move_pair_to_done(image_path: Path, text_path: Path, check_done_dir: Path) -> None:
+def downsize_image_to_target_kb(image_path: Path, target_kb: int) -> None:
+    target_bytes = max(1, target_kb) * 1024
+    if image_path.stat().st_size <= target_bytes:
+        return
+
+    with Image.open(image_path) as source:
+        prepared = source.convert("RGB")
+        exif_bytes = source.info.get("exif")
+
+    best_payload: bytes | None = None
+    low_quality = 20
+    high_quality = 95
+
+    # Binary search to keep the best visual quality while trying to stay under the requested size.
+    while low_quality <= high_quality:
+        quality = (low_quality + high_quality) // 2
+        buffer = io.BytesIO()
+        save_kwargs = {
+            "format": "JPEG",
+            "quality": quality,
+            "optimize": True,
+            "progressive": True,
+        }
+        if exif_bytes:
+            save_kwargs["exif"] = exif_bytes
+        prepared.save(buffer, **save_kwargs)
+        payload = buffer.getvalue()
+
+        if len(payload) <= target_bytes:
+            best_payload = payload
+            low_quality = quality + 1
+        else:
+            high_quality = quality - 1
+
+    if best_payload is None:
+        buffer = io.BytesIO()
+        fallback_kwargs = {
+            "format": "JPEG",
+            "quality": 20,
+            "optimize": True,
+            "progressive": True,
+        }
+        if exif_bytes:
+            fallback_kwargs["exif"] = exif_bytes
+        prepared.save(buffer, **fallback_kwargs)
+        best_payload = buffer.getvalue()
+
+    image_path.write_bytes(best_payload)
+
+
+
+def move_pair_to_done(
+    image_path: Path,
+    text_path: Path,
+    check_done_dir: Path,
+    *,
+    downsize_enabled: bool = False,
+    downsize_kb: int = DOWNSIZE_DEFAULT_KB,
+) -> None:
     check_done_dir.mkdir(parents=True, exist_ok=True)
 
     image_target = check_done_dir / image_path.name
@@ -876,6 +935,13 @@ def move_pair_to_done(image_path: Path, text_path: Path, check_done_dir: Path) -
 
     if image_target.exists() or text_target.exists():
         raise FileExistsError("target_exists_in_done")
+
+    if downsize_enabled:
+        try:
+            downsize_image_to_target_kb(image_path, downsize_kb)
+        except (OSError, ValueError):
+            # Best effort: validation should still proceed even if one image cannot be recompressed.
+            pass
 
     shutil.move(str(image_path), str(image_target))
     shutil.move(str(text_path), str(text_target))
@@ -1429,7 +1495,13 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
 
         try:
-            move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])
+            move_pair_to_done(
+                current_record.image_path,
+                current_record.text_path,
+                app.config["CHECK_DONE_DIR"],
+                downsize_enabled=view_state.downsize_enabled,
+                downsize_kb=view_state.downsize_kb,
+            )
         except FileExistsError as exc:
             key = "error_target_exists_in_done" if str(exc) == "target_exists_in_done" else str(exc)
             flash(tr(view_state.lang, key) if key in TRANSLATIONS[view_state.lang] else key, "error")
@@ -1453,7 +1525,13 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         next_name = remaining_records[min(current_index, len(remaining_records) - 1)].image_name if remaining_records else ""
 
         try:
-            move_pair_to_done(current_record.image_path, current_record.text_path, app.config["CHECK_DONE_DIR"])
+            move_pair_to_done(
+                current_record.image_path,
+                current_record.text_path,
+                app.config["CHECK_DONE_DIR"],
+                downsize_enabled=view_state.downsize_enabled,
+                downsize_kb=view_state.downsize_kb,
+            )
         except FileExistsError as exc:
             key = "error_target_exists_in_done" if str(exc) == "target_exists_in_done" else str(exc)
             flash(tr(view_state.lang, key) if key in TRANSLATIONS[view_state.lang] else key, "error")

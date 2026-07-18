@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from app import create_app, extract_text_from_paddle_result
+from PIL import Image
 
 
 class OCRCompareAppTests(unittest.TestCase):
@@ -33,6 +34,20 @@ class OCRCompareAppTests(unittest.TestCase):
     def create_image(self, name: str, timestamp: int) -> Path:
         image_path = self.images_dir / name
         image_path.write_bytes(b"fake-jpg-content")
+        os.utime(image_path, (timestamp, timestamp))
+        return image_path
+
+    def create_real_jpeg(self, name: str, timestamp: int, size: tuple[int, int] = (2400, 1600)) -> Path:
+        image_path = self.images_dir / name
+        width, height = size
+        image = Image.new("RGB", size)
+        pixels = image.load()
+        for y in range(height):
+            for x in range(width):
+                # Deterministic pseudo-noise to avoid over-compression and produce a measurable size drop.
+                value = (x * 13 + y * 7) % 256
+                pixels[x, y] = (value, (value * 3) % 256, (value * 5) % 256)
+        image.save(image_path, format="JPEG", quality=95)
         os.utime(image_path, (timestamp, timestamp))
         return image_path
 
@@ -188,6 +203,77 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(moved_text, "saved before move")
         self.assertTrue(second_text.exists())
         self.assertIn("page-b.jpg", response.get_data(as_text=True))
+
+    def test_validate_and_next_downsizes_image_when_option_enabled(self) -> None:
+        first_image = self.create_real_jpeg("page-downsize.jpg", 100)
+        second_image = self.create_image("page-next.jpg", 200)
+        first_text = first_image.with_suffix(".txt")
+        second_text = second_image.with_suffix(".txt")
+        first_text.write_text("draft", encoding="utf-8")
+        second_text.write_text("next", encoding="utf-8")
+        initial_size = first_image.stat().st_size
+
+        response = self.client.post(
+            "/validate-and-next",
+            data={
+                "current_image": "page-downsize.jpg",
+                "text": "saved before move",
+                "sort": "oldest",
+                "text_filter": "all",
+                "q": "",
+                "downsize_enabled": "1",
+                "downsize_kb": "200",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        moved_image = self.check_done_dir / "page-downsize.jpg"
+        self.assertTrue(moved_image.exists())
+        self.assertLess(moved_image.stat().st_size, initial_size)
+
+    def test_validate_and_next_calls_downsize_only_when_enabled(self) -> None:
+        first_image = self.create_image("page-a.jpg", 100)
+        second_image = self.create_image("page-b.jpg", 200)
+        first_image.with_suffix(".txt").write_text("draft", encoding="utf-8")
+        second_image.with_suffix(".txt").write_text("next", encoding="utf-8")
+
+        with patch("app.downsize_image_to_target_kb") as mock_downsize:
+            self.client.post(
+                "/validate-and-next",
+                data={
+                    "current_image": "page-a.jpg",
+                    "text": "saved before move",
+                    "sort": "oldest",
+                    "text_filter": "all",
+                    "q": "",
+                    "downsize_enabled": "1",
+                    "downsize_kb": "250",
+                },
+                follow_redirects=True,
+            )
+        mock_downsize.assert_called_once()
+
+        first_image = self.create_image("page-c.jpg", 300)
+        second_image = self.create_image("page-d.jpg", 400)
+        first_image.with_suffix(".txt").write_text("draft", encoding="utf-8")
+        second_image.with_suffix(".txt").write_text("next", encoding="utf-8")
+
+        with patch("app.downsize_image_to_target_kb") as mock_downsize:
+            self.client.post(
+                "/validate-and-next",
+                data={
+                    "current_image": "page-c.jpg",
+                    "text": "saved before move",
+                    "sort": "oldest",
+                    "text_filter": "all",
+                    "q": "",
+                    "downsize_enabled": "",
+                    "downsize_kb": "250",
+                },
+                follow_redirects=True,
+            )
+        mock_downsize.assert_not_called()
 
     def test_undo_validation_reports_conflict_when_name_already_exists(self) -> None:
         image_path = self.create_image("page-conflict.jpg", 100)

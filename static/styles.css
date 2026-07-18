@@ -768,6 +768,60 @@ textarea {
     background: #111827;
 }
 
+/* ── Capture flash overlay ── */
+.capture-flash-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+    background: rgba(220, 38, 38, 0.18);
+    border-radius: inherit;
+    transition: none;
+}
+
+.capture-flash-overlay.is-flashing {
+    animation: capture-flash-anim 1.5s ease-out forwards;
+}
+
+@keyframes capture-flash-anim {
+    0%   { opacity: 0; background: rgba(220, 38, 38, 0.35); }
+    12%  { opacity: 1; background: rgba(220, 38, 38, 0.22); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; background: rgba(220, 38, 38, 0.10); }
+}
+
+.capture-flash-circle {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    background: rgba(220, 38, 38, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 8px rgba(220, 38, 38, 0.28), 0 6px 32px rgba(0,0,0,0.35);
+    animation: capture-flash-circle-anim 1.5s ease-out forwards;
+}
+
+@keyframes capture-flash-circle-anim {
+    0%   { transform: scale(0.55); opacity: 0; }
+    18%  { transform: scale(1.08); opacity: 1; }
+    32%  { transform: scale(0.96); }
+    45%  { transform: scale(1.0); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: scale(1.04); opacity: 0; }
+}
+
+.capture-flash-circle svg {
+    width: 52px;
+    height: 52px;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+}
+
+/* ── end capture flash overlay ── */
+
 .capture-center-line {
     position: absolute;
     top: 0;

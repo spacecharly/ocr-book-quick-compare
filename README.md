@@ -410,6 +410,8 @@ Use this when you want hands-free image capture while holding book pages.
 - Visual capture counter
 - Configurable filename prefix
 - Optional audio beep after each capture
+- Capture settings persistence (mode, prefix, beep) via browser local storage
+- Large fullscreen scan mode button
 - More explicit browser compatibility status (Chrome / Safari / Firefox)
 - Voice trigger now auto-retries on transient network errors and shows clearer microphone/network guidance
 - Voice trigger now uses local detection through Flask + Vosk (no browser cloud speech dependency)

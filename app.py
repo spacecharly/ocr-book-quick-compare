@@ -93,6 +93,9 @@ TRANSLATIONS = {
         "capture_rotation": "Rotation",
         "capture_rotate_left": "↺ -90°",
         "capture_rotate_right": "↻ +90°",
+        "capture_scan_mode": "Mode scan",
+        "capture_scan_enter": "Plein ecran",
+        "capture_scan_exit": "Quitter plein ecran",
         "capture_mode_one": "1 page à la fois",
         "capture_mode_two": "2 pages à la fois",
         "capture_output_folder": "Dossier de sauvegarde",
@@ -206,6 +209,9 @@ TRANSLATIONS = {
         "capture_rotation": "Rotation",
         "capture_rotate_left": "↺ -90°",
         "capture_rotate_right": "↻ +90°",
+        "capture_scan_mode": "Scan mode",
+        "capture_scan_enter": "Enter fullscreen",
+        "capture_scan_exit": "Exit fullscreen",
         "capture_mode_one": "1 page at a time",
         "capture_mode_two": "2 pages at a time",
         "capture_output_folder": "Save folder",
@@ -319,6 +325,9 @@ TRANSLATIONS = {
         "capture_rotation": "Rotazione",
         "capture_rotate_left": "↺ -90°",
         "capture_rotate_right": "↻ +90°",
+        "capture_scan_mode": "Modalita scansione",
+        "capture_scan_enter": "Schermo intero",
+        "capture_scan_exit": "Esci da schermo intero",
         "capture_mode_one": "1 pagina alla volta",
         "capture_mode_two": "2 pagine alla volta",
         "capture_output_folder": "Cartella di salvataggio",
@@ -432,6 +441,9 @@ TRANSLATIONS = {
         "capture_rotation": "Drehung",
         "capture_rotate_left": "↺ -90°",
         "capture_rotate_right": "↻ +90°",
+        "capture_scan_mode": "Scanmodus",
+        "capture_scan_enter": "Vollbild aktivieren",
+        "capture_scan_exit": "Vollbild beenden",
         "capture_mode_one": "1 Seite gleichzeitig",
         "capture_mode_two": "2 Seiten gleichzeitig",
         "capture_output_folder": "Speicherordner",
@@ -518,6 +530,14 @@ class PairRecord:
     @property
     def text_length(self) -> int:
         return len(self.text_content.strip())
+
+    @property
+    def image_size_kb(self) -> int:
+        byte_size = self.image_path.stat().st_size
+        if byte_size <= 0:
+            return 0
+        # Keep tiny files readable in the UI instead of showing an empty/zero-like value.
+        return max(1, round(byte_size / 1024))
 
 
 @dataclass
@@ -927,6 +947,15 @@ def get_paddle_ocr(language: str):
 
 
 def extract_text_from_paddle_result(result) -> str:
+    def _normalize_ocr_text(value) -> str:
+        """Extract plain text from OCR payload variants (string or (text, score) tuple)."""
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple)) and value:
+            # Common legacy shape: ("text", confidence)
+            return str(value[0]).strip()
+        return str(value).strip()
+
     lines: list[str] = []
 
     if not result:
@@ -943,7 +972,10 @@ def extract_text_from_paddle_result(result) -> str:
             rec_texts = getattr(page, "rec_texts")
 
         if rec_texts:
-            lines.extend(str(text).strip() for text in rec_texts if str(text).strip())
+            for text in rec_texts:
+                normalized = _normalize_ocr_text(text)
+                if normalized:
+                    lines.append(normalized)
             continue
 
         if isinstance(page, dict):
@@ -959,9 +991,9 @@ def extract_text_from_paddle_result(result) -> str:
                     if text:
                         lines.append(str(text).strip())
                 elif isinstance(item, (list, tuple)) and len(item) >= 2:
-                    text = item[1]
+                    text = _normalize_ocr_text(item[1])
                     if text:
-                        lines.append(str(text).strip())
+                        lines.append(text)
 
     return "\n".join(line for line in lines if line)
 

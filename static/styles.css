@@ -701,6 +701,13 @@ textarea {
     font-weight: 600;
 }
 
+.capture-scan-button {
+    width: 100%;
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 700;
+}
+
 .voice-engine-indicator {
     display: inline-flex;
     align-items: center;

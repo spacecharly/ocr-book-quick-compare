@@ -108,6 +108,16 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(text_path.read_text(encoding="utf-8"), "après correction OCR")
         self.assertIn("Texte mis à jour", response.get_data(as_text=True))
 
+    def test_index_shows_image_size_kb_indicator(self) -> None:
+        image_path = self.create_image("page-size.jpg", 100)
+        image_path.with_suffix(".txt").write_text("", encoding="utf-8")
+
+        response = self.client.get("/")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("(1 KB)", html)
+
     def test_autosave_updates_selected_text_file_and_returns_json(self) -> None:
         image_path = self.create_image("page-autosave.jpg", 100)
         text_path = image_path.with_suffix(".txt")
@@ -267,6 +277,22 @@ class OCRCompareAppTests(unittest.TestCase):
 
         self.assertEqual(extract_text_from_paddle_result(nested_result), "Bonjour\nle\nmonde\n!\nfin")
 
+    def test_extract_text_from_paddle_result_drops_confidence_scores(self) -> None:
+        tuple_result = [
+            {
+                "rec_texts": [
+                    ("KANAS", 0.99),
+                    ("13", 0.98),
+                    ("bavard,je lui raconte mon histoire.", 0.96),
+                ]
+            }
+        ]
+
+        self.assertEqual(
+            extract_text_from_paddle_result(tuple_result),
+            "KANAS\n13\nbavard,je lui raconte mon histoire.",
+        )
+
     def test_capture_companion_route_renders_browser_capture_ui(self) -> None:
         response = self.client.get("/capture?lang=en")
 
@@ -277,6 +303,7 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("File prefix", page_html)
         self.assertIn("Captures taken", page_html)
         self.assertIn("Audio beep after capture", page_html)
+        self.assertIn("Scan mode", page_html)
         self.assertIn("capture_app.js", page_html)
 
     def test_run_ocr_can_use_paddle_method(self) -> None:

@@ -171,7 +171,7 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Valider cette page et passer à la suivante ?",
         "js_confirm_ocr_overwrite": "Le texte affiché a été modifié. Lancer l'OCR va remplacer le contenu actuel. Continuer ?",
         "js_upload_ready": "{count} fichier(s) prêt(s). Déposez-en d'autres ou relâchez pour importer.",
-        "downsize_validated": "Réduire les images validées",
+        "downsize_validated": "Post-validation downsize images",
         "downsize_target": "Taille cible",
     },
     "en": {
@@ -293,7 +293,7 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Validate this page and move to the next one?",
         "js_confirm_ocr_overwrite": "Displayed text was edited. Running OCR will replace current content. Continue?",
         "js_upload_ready": "{count} file(s) ready. Drop more files or release to import.",
-        "downsize_validated": "Downsize validated images",
+        "downsize_validated": "Post-validation downsize images",
         "downsize_target": "Target size",
     },
     "it": {
@@ -415,7 +415,7 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Convalidare questa pagina e passare alla successiva?",
         "js_confirm_ocr_overwrite": "Il testo visualizzato è stato modificato. L'OCR sostituirà il contenuto corrente. Continuare?",
         "js_upload_ready": "{count} file pronto/i. Trascinane altri o rilascia per importare.",
-        "downsize_validated": "Riduci le immagini convalidate",
+        "downsize_validated": "Immagini ridimensionate dopo la convalida",
         "downsize_target": "Dimensione target",
     },
     "de": {
@@ -537,7 +537,7 @@ TRANSLATIONS = {
         "js_confirm_validate_next": "Diese Seite validieren und zur nächsten wechseln?",
         "js_confirm_ocr_overwrite": "Der angezeigte Text wurde geändert. OCR ersetzt den aktuellen Inhalt. Fortfahren?",
         "js_upload_ready": "{count} Datei(en) bereit. Weitere ablegen oder zum Import loslassen.",
-        "downsize_validated": "Validierte Bilder verkleinern",
+        "downsize_validated": "Bilder nach der Validierung verkleinern",
         "downsize_target": "Zielgröße",
     },
 }

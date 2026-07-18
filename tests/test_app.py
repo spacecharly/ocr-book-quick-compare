@@ -110,6 +110,7 @@ class OCRCompareAppTests(unittest.TestCase):
         html_off = response_off.get_data(as_text=True)
         self.assertEqual(response_off.status_code, 200)
         self.assertIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()"', html_off)
+        self.assertEqual(html_off.count('name="spellcheck_enabled" value="1" onchange="this.form.submit()"'), 1)
         self.assertNotIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()" checked', html_off)
 
         response_on = self.client.get("/?spellcheck_enabled=1")

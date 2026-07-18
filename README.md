@@ -136,6 +136,69 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
+## Quick Start with Docker (Recommended for One-Click Setup)
+
+If you have Docker installed, the fastest way to get started is:
+
+```bash
+cd "[PROJECT DIR]"
+docker-compose up --build
+```
+
+Then open your browser to:
+
+```text
+http://127.0.0.1:5001
+```
+
+**That's it!** All dependencies (Python, OCR models, image libraries) are pre-configured.
+
+**Stop the app:**
+
+```bash
+docker-compose down
+```
+
+**Restart later:**
+
+```bash
+docker-compose up
+```
+
+### Docker Options
+
+- **Change OCR language**: Edit `docker-compose.yml` and uncomment the `OCR_LANG` variable:
+
+```yaml
+environment:
+  - OCR_LANG=fr  # or: en, it, de
+```
+
+Then restart:
+
+```bash
+docker-compose up --build
+```
+
+- **Rebuild the image** (if requirements.txt changed):
+
+```bash
+docker-compose up --build
+```
+
+- **View logs**:
+
+```bash
+docker-compose logs -f
+```
+
+- **One-command start from anywhere**:
+
+```bash
+cd /path/to/ocr-book-quick-compare
+docker-compose up
+```
+
 ## One-command bootstrap (recommended)
 
 Use the bootstrap script to configure both virtualenvs, install dependencies, download the Vosk model, and run basic checks.

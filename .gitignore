@@ -1,4 +1,4 @@
-.venv/
+ .venv/
 capture-app/.venv/
 __pycache__/
 .pytest_cache/
@@ -10,6 +10,11 @@ __pycache__/
 # Local OCR test assets (never commit)
 images/**
 !images/
+
+# Vosk ML models (large, auto-downloaded by bootstrap.sh)
+capture-app/models/**
+!capture-app/models/
+!capture-app/models/.gitkeep
 
 
 

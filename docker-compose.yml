@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  ocr-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ocr-book-quick-compare
+    ports:
+      - "5001:5001"
+    volumes:
+      # Mount the images directory for persistent storage
+      - ./images:/app/images
+      # Optional: mount resources if you want to edit them live
+      - ./resources:/app/resources
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=production
+      - OCR_LANG=en
+      # Uncomment to change OCR language (fr, de, it, en)
+      # - OCR_LANG=fr
+    restart: unless-stopped
+    # Optional: set resource limits
+    # deploy:
+    #   resources:
+    #     limits:
+    #       memory: 4G
+    #     reservations:
+    #       memory: 2G
+

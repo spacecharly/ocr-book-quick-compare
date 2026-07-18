@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="{{ current_lang }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ t('capture_title') }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<div class="page capture-page"
+     data-capture-save-url="{{ url_for('capture_save_images') }}"
+     data-i18n-ready="{{ t('capture_status_ready') }}"
+     data-i18n-browser-unsupported="{{ t('capture_status_browser_unsupported') }}"
+     data-i18n-browser-status-label="{{ t('capture_browser_status') }}"
+     data-i18n-browser-status-unknown="{{ t('capture_browser_status_unknown') }}"
+     data-i18n-browser-status-chrome="{{ t('capture_browser_status_chrome') }}"
+     data-i18n-browser-status-safari="{{ t('capture_browser_status_safari') }}"
+     data-i18n-browser-status-firefox="{{ t('capture_browser_status_firefox') }}"
+     data-i18n-browser-status-generic="{{ t('capture_browser_status_generic', name='__BROWSER__') }}"
+     data-i18n-voice-hint="{{ t('capture_voice_hint') }}"
+     data-i18n-camera-label="{{ t('capture_camera') }}"
+     data-i18n-no-camera="No camera detected"
+     data-i18n-camera-enabled="Camera access granted"
+     data-i18n-camera-failed="Camera access failed"
+     data-i18n-camera-opened="Camera ready"
+     data-i18n-camera-refresh-failed="Could not refresh camera list"
+     data-i18n-capture-missing-stream="No live camera stream available"
+     data-i18n-capture-saved-one="Saved 1 page"
+     data-i18n-capture-saved-two="Saved 2 pages"
+     data-i18n-voice-unsupported="Speech recognition is not supported in this browser"
+     data-i18n-voice-started="Voice recognition started"
+     data-i18n-voice-stopped="Voice recognition stopped"
+     data-i18n-voice-error="Voice recognition error"
+     data-i18n-voice-browser-not-supported="{{ t('capture_voice_browser_not_supported') }}"
+     data-i18n-voice-network-retry="{{ t('capture_voice_network_retry') }}"
+     data-i18n-voice-network-unavailable="{{ t('capture_voice_network_unavailable') }}"
+     data-i18n-voice-permission-blocked="{{ t('capture_voice_permission_blocked') }}"
+     data-i18n-voice-engine-idle="{{ t('capture_voice_engine_idle') }}"
+     data-i18n-voice-engine-listening="{{ t('capture_voice_engine_listening') }}"
+     data-i18n-voice-engine-processing="{{ t('capture_voice_engine_processing') }}"
+     data-i18n-voice-engine-error="{{ t('capture_voice_engine_error') }}"
+     data-i18n-trigger-detected="Trigger word detected: next"
+     data-i18n-resolution-photo="Full-resolution photo"
+     data-i18n-resolution-video="Video frame fallback"
+     data-i18n-resolution-pending="Resolution unknown"
+     data-i18n-scan-enter="{{ t('capture_scan_enter') }}"
+     data-i18n-scan-exit="{{ t('capture_scan_exit') }}"
+     data-i18n-counter-label="{{ t('capture_counter') }}"
+     data-i18n-prefix-hint="{{ t('capture_prefix_hint') }}"
+     data-i18n-beep-label="{{ t('capture_beep') }}">
+    <header class="topbar">
+        <div class="title-block">
+            <h1>{{ t('capture_title') }}</h1>
+            <p class="subtitle">{{ t('capture_subtitle') }}</p>
+        </div>
+        <div class="actions">
+            <a href="{{ url_for('index', lang=current_lang) }}" class="button-link">{{ t('capture_back') }}</a>
+        </div>
+    </header>
+
+    <div class="flash-list">
+        <div class="flash info capture-browser-note">{{ t('capture_browser_note') }}</div>
+        <div class="flash info capture-browser-note" data-browser-status-banner>{{ t('capture_browser_status') }}</div>
+    </div>
+
+    <div class="work-area capture-layout">
+        <section class="panel capture-panel">
+            <div class="panel-header">
+                <div>
+                    <h2>{{ t('capture_camera') }}</h2>
+                    <p class="muted" data-capture-status>{{ t('capture_status_ready') }}</p>
+                </div>
+                <span class="muted-pill" data-capture-folder-label>{{ t('capture_save_to_working_folder') }}: {{ current_working_folder }}</span>
+            </div>
+
+            <div class="capture-summary-row">
+                <span class="muted-pill"><strong data-capture-counter>0</strong> {{ t('capture_counter') }}</span>
+                <span class="muted-pill"><strong>{{ t('capture_resolution') }}:</strong> <span data-capture-resolution>{{ t('capture_status_ready') }}</span></span>
+            </div>
+
+            <div class="capture-controls-grid">
+                <div class="capture-field">
+                    <span>{{ t('capture_camera') }}</span>
+                    <div class="capture-inline-row">
+                        <button type="button" data-capture-enable>{{ t('capture_enable_camera') }}</button>
+                        <button type="button" class="secondary" data-capture-refresh>{{ t('capture_refresh_cameras') }}</button>
+                    </div>
+                    <select data-camera-select></select>
+                </div>
+
+                <div class="capture-field">
+                    <span>{{ t('capture_mode') }}</span>
+                    <select data-capture-mode>
+                        <option value="one_page">{{ t('capture_mode_one') }}</option>
+                        <option value="two_pages">{{ t('capture_mode_two') }}</option>
+                    </select>
+                    <p class="muted" data-capture-mode-hint>{{ t('capture_alignment_hint') }}</p>
+                </div>
+
+                <div class="capture-field">
+                    <span>{{ t('capture_rotation') }}</span>
+                    <div class="capture-inline-row">
+                        <button type="button" class="secondary" data-rotate-left>{{ t('capture_rotate_left') }}</button>
+                        <button type="button" class="secondary" data-rotate-right>{{ t('capture_rotate_right') }}</button>
+                    </div>
+                </div>
+
+                <div class="capture-field">
+                    <span>{{ t('capture_scan_mode') }}</span>
+                    <button type="button" class="capture-scan-button" data-scan-toggle>{{ t('capture_scan_enter') }}</button>
+                </div>
+
+                <div class="capture-field">
+                    <span>{{ t('capture_output_folder') }}</span>
+                    <div class="capture-inline-row">
+                        <button type="button" data-capture-now>{{ t('capture_capture_now') }}</button>
+                    </div>
+                    <p class="muted">{{ t('capture_save_to_working_folder') }}</p>
+                </div>
+
+                <div class="capture-field">
+                    <span>{{ t('capture_prefix') }}</span>
+                    <input type="text" data-capture-prefix placeholder="{{ t('capture_prefix_hint') }}">
+                    <label class="capture-checkbox-row">
+                        <input type="checkbox" data-capture-beep checked>
+                        {{ t('capture_beep') }}
+                    </label>
+                </div>
+
+                <div class="capture-field">
+                    <span>Voice</span>
+                    <div class="capture-inline-row">
+                        <button type="button" class="secondary" data-start-voice>{{ t('capture_start_voice') }}</button>
+                        <button type="button" class="secondary" data-stop-voice>{{ t('capture_stop_voice') }}</button>
+                    </div>
+                    <div class="voice-engine-indicator is-idle" data-voice-engine-indicator>
+                        <span class="voice-dot" aria-hidden="true"></span>
+                        <span>{{ t('capture_voice_engine') }}: <strong data-voice-engine-text>{{ t('capture_voice_engine_idle') }}</strong></span>
+                    </div>
+                    <p class="muted">{{ t('capture_voice_hint') }}</p>
+                </div>
+            </div>
+
+            <div class="capture-preview-shell">
+                <video autoplay playsinline muted data-camera-video></video>
+                <div class="capture-center-line" data-capture-center-line hidden></div>
+                <div class="capture-flash-overlay" data-capture-flash aria-hidden="true">
+                    <div class="capture-flash-circle">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                            <circle cx="12" cy="13" r="4" stroke="white" stroke-width="1.8"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<script src="{{ url_for('static', filename='capture_app.js') }}"></script>
+</body>
+</html>
+
+

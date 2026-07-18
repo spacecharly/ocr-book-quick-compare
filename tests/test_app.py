@@ -178,6 +178,29 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertTrue(first_image.exists())
         self.assertTrue(third_image.exists())
 
+    def test_validate_downsizes_image_when_option_enabled(self) -> None:
+        image_path = self.create_real_jpeg("page-validate-downsize.jpg", 100)
+        image_path.with_suffix(".txt").write_text("draft", encoding="utf-8")
+        initial_size = image_path.stat().st_size
+
+        response = self.client.post(
+            "/validate",
+            data={
+                "current_image": "page-validate-downsize.jpg",
+                "sort": "oldest",
+                "text_filter": "all",
+                "q": "",
+                "downsize_enabled": "1",
+                "downsize_kb": "200",
+            },
+            follow_redirects=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        moved_image = self.check_done_dir / "page-validate-downsize.jpg"
+        self.assertTrue(moved_image.exists())
+        self.assertLess(moved_image.stat().st_size, initial_size)
+
     def test_validate_and_next_saves_then_moves_pair(self) -> None:
         first_image = self.create_image("page-a.jpg", 100)
         second_image = self.create_image("page-b.jpg", 200)

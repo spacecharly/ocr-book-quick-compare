@@ -265,9 +265,6 @@
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>
                         {% endif %}
                         <button type="submit" data-submit-kind="save">💾 {{ t('save') }}</button>
-                        {% if view_state.downsize_enabled %}
-                            <span class="downsize-status-badge">ON ({{ view_state.downsize_kb }} KB)</span>
-                        {% endif %}
                         <button type="submit" formaction="{{ url_for('validate_and_next') }}" data-submit-kind="validate-next" class="validate">✓ {{ t('validate_next') }}</button>
                     </div>
                 </form>

@@ -27,6 +27,9 @@
 </p>
 
 <p>
+  <a href="#quick-start-with-docker-recommended-for-one-click-setup">
+    <img alt="Docker" src="https://img.shields.io/badge/Install-Docker-2496ED?logo=docker&logoColor=white" />
+  </a>
   <img alt="Python" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white" />
   <img alt="Flask" src="https://img.shields.io/badge/Flask-Web%20App-000000?logo=flask&logoColor=white" />
   <img alt="OCR" src="https://img.shields.io/badge/OCR-PaddleOCR-1F6FEB" />
@@ -249,50 +252,50 @@ source .venv/bin/activate
 python3 app.py
 ```
 
-## Démarrage quotidien
+## Daily Start-up Flow
 
-Une fois `./bootstrap.sh` exécuté avec succès une première fois, le flux quotidien recommandé est le suivant.
+Once `./bootstrap.sh` has been run successfully once, the recommended daily workflow is as follows.
 
-### 1) Redémarrer l'app web OCR
+### 1) Restart the OCR web app
 
-Utilise `restart.sh` pour relancer proprement l'application principale Flask :
+Use `restart.sh` to cleanly restart the main Flask application:
 
 ```bash
 cd "[PROJECT DIR]"
 ./restart.sh
 ```
 
-Notes :
-- le script utilise automatiquement le virtualenv racine `./.venv`
-- il arrête un ancien serveur du projet s'il écoute déjà sur le même port
-- par défaut, le port utilisé est `5001`
+Notes:
+- the script automatically uses the root virtualenv `./.venv`
+- it stops any old server from this project already listening on the same port
+- by default, the port used is `5001`
 
-Ensuite, ouvre dans le navigateur :
+Then open in your browser:
 
 ```text
 http://127.0.0.1:5001
 ```
 
-### 2) Ouvrir la companion capture app
+### 2) Open the companion capture app
 
-Depuis l'interface de `OCR Book Quick Compare`, clique sur **Open Capture App** dans la barre du haut.
+From the `OCR Book Quick Compare` interface, click **Open Capture App** in the top toolbar.
 
-La companion app s'ouvre dans un **nouvel onglet du navigateur**.
+The companion app opens in a **new browser tab**.
 
-Elle utilise les API web du navigateur pour :
-- détecter les caméras disponibles
-- afficher le flux live
-- capturer 1 page ou 2 pages
-- séparer automatiquement gauche/droite en mode 2 pages
-- écouter le mot déclencheur `next` si le navigateur supporte la reconnaissance vocale
+It uses the browser's web APIs for:
+- detecting available cameras
+- displaying live feed
+- capturing 1 page or 2 pages
+- automatically separating left/right in 2-page mode
+- listening for the `next` trigger word if the browser supports speech recognition
 
-### 3) Alternative: lancer la capture app manuellement
+### 3) Alternative: launch the capture app manually
 
-La version recommandée est désormais celle dans le navigateur.
+The recommended version is now the one in the browser.
 
-Le prototype desktop dans `capture-app/` peut rester utile pour des essais techniques, mais sur certaines machines macOS il peut planter à cause de la pile GUI native Python/Tk.
+The desktop prototype in `capture-app/` can remain useful for technical testing, but on some macOS machines it may crash due to the Python/Tk native GUI stack.
 
-Si tu veux quand même tester ce prototype desktop manuellement :
+If you still want to test the desktop prototype manually:
 
 ```bash
 cd "[PROJECT DIR]"
@@ -300,14 +303,14 @@ source capture-app/.venv/bin/activate
 python3 capture-app/main.py
 ```
 
-### 4) Quand relancer `bootstrap.sh` ?
+### 4) When to re-run `bootstrap.sh`?
 
-Tu n'as normalement pas besoin de relancer `bootstrap.sh` chaque jour.
-Relance-le seulement si par exemple :
+You normally don't need to re-run `bootstrap.sh` every day.
+Re-run it only if, for example:
 
-- tu recrées les virtualenvs
-- tu modifies les dépendances Python
-- tu veux retélécharger/configurer le modèle vocal Vosk
+- you recreate the virtualenvs
+- you modify Python dependencies
+- you want to re-download/reconfigure the Vosk speech model
 
 ```bash
 cd "[PROJECT DIR]"

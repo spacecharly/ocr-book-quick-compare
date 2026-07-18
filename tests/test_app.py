@@ -304,6 +304,7 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("Captures taken", page_html)
         self.assertIn("Audio beep after capture", page_html)
         self.assertIn("Scan mode", page_html)
+        self.assertIn("Resolution", page_html)
         self.assertIn("capture_app.js", page_html)
 
     def test_run_ocr_can_use_paddle_method(self) -> None:

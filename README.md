@@ -404,6 +404,7 @@ Use this when you want hands-free image capture while holding book pages.
 - Camera source selection from detected devices
 - Shared **Working Folder** configured in the main OCR app
 - Captured images are saved directly into that Working Folder (with paired `.txt` files)
+- Attempts full-resolution still capture first (`ImageCapture.takePhoto()`), then falls back to the live video frame if unavailable
 - Mode `one_page` (single file) or `two_pages` (auto split into `-left` and `-right`)
 - Fixed center alignment line shown in `two_pages` mode
 - Opens in a new browser tab from the main app

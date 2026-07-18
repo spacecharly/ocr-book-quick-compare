@@ -614,26 +614,59 @@ textarea {
     font-weight: 700;
 }
 
-.spellcheck-status-badge {
+.switch-control {
     display: inline-flex;
     align-items: center;
-    padding: 8px 12px;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    font-weight: 600;
+}
+
+.switch-control input {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+}
+
+.switch-slider {
+    width: 40px;
+    height: 22px;
     border-radius: 999px;
-    border: 1px solid #d1d5db;
-    font-size: 12px;
-    font-weight: 700;
+    background: #d1d5db;
+    position: relative;
+    transition: background 0.2s ease;
 }
 
-.spellcheck-status-badge.is-on {
-    background: #ecfeff;
-    color: #0f766e;
-    border-color: #99f6e4;
+.switch-slider::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+    transition: transform 0.2s ease;
 }
 
-.spellcheck-status-badge.is-off {
-    background: #f3f4f6;
-    color: #4b5563;
-    border-color: #e5e7eb;
+.switch-control input:checked + .switch-slider {
+    background: #10b981;
+}
+
+.switch-control input:checked + .switch-slider::before {
+    transform: translateX(18px);
+}
+
+.switch-control input:focus-visible + .switch-slider {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+.switch-label {
+    line-height: 1.1;
 }
 
 .inset-panel {

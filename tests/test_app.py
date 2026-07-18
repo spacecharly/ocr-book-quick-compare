@@ -102,19 +102,20 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertIn("Validated", page_html)
         self.assertIn("Choose working folder", page_html)
 
-    def test_ocr_panel_shows_spellcheck_on_off_badge(self) -> None:
+    def test_ocr_panel_shows_spellcheck_toggle_checked_state(self) -> None:
         image_path = self.create_image("page-badge.jpg", 100)
         image_path.with_suffix(".txt").write_text("texte", encoding="utf-8")
 
         response_off = self.client.get("/")
         html_off = response_off.get_data(as_text=True)
         self.assertEqual(response_off.status_code, 200)
-        self.assertIn("Post-correction orthographique: OFF", html_off)
+        self.assertIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()"', html_off)
+        self.assertNotIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()" checked', html_off)
 
         response_on = self.client.get("/?spellcheck_enabled=1")
         html_on = response_on.get_data(as_text=True)
         self.assertEqual(response_on.status_code, 200)
-        self.assertIn("Post-correction orthographique: ON", html_on)
+        self.assertIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()" checked', html_on)
 
     def test_save_updates_selected_text_file(self) -> None:
         image_path = self.create_image("page-save.jpg", 100)

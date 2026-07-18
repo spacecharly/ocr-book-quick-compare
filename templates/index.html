@@ -37,7 +37,6 @@
                 </div>
                 <div class="actions">
                     <label><input type="checkbox" name="auto_ocr" value="1"> {{ t('auto_ocr') }}</label>
-                    <label><input type="checkbox" name="spellcheck_enabled" value="1" {% if effective_spellcheck_enabled %}checked{% endif %}> {{ t('spellcheck_post_ocr') }}</label>
                 </div>
             </form>
             <form class="working-folder-form" action="{{ url_for('set_working_folder') }}" method="post">
@@ -104,9 +103,10 @@
                 <input type="hidden" name="q" value="{{ view_state.query }}">
                 <input type="hidden" name="lang" value="{{ current_lang }}">
                 <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
-                <label class="downsize-toggle-label">
+                <label class="switch-control">
                     <input type="checkbox" name="spellcheck_enabled" value="1" onchange="this.form.submit()" {% if effective_spellcheck_enabled %}checked{% endif %}>
-                    {{ t('spellcheck_post_ocr') }}
+                    <span class="switch-slider" aria-hidden="true"></span>
+                    <span class="switch-label">{{ t('spellcheck_post_ocr') }}</span>
                 </label>
                 <label class="downsize-toggle-label">
                     <input type="checkbox" name="downsize_enabled" value="1" data-downsize-toggle {% if view_state.downsize_enabled %}checked{% endif %}>
@@ -274,9 +274,6 @@
                     <div class="form-actions">
                         {% if ocr_available %}
                             <button type="submit" formaction="{{ url_for('run_ocr') }}" data-submit-kind="ocr" class="secondary">🔍 {{ t('paddle_ocr') }}</button>
-                            <span class="spellcheck-status-badge {% if effective_spellcheck_enabled %}is-on{% else %}is-off{% endif %}">
-                                {{ t('spellcheck_post_ocr') }}: {{ t('status_on') if effective_spellcheck_enabled else t('status_off') }}
-                            </span>
                         {% endif %}
                         <button type="submit" data-submit-kind="save">💾 {{ t('save') }}</button>
                         {% if view_state.downsize_enabled %}

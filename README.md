@@ -103,6 +103,25 @@ Why it fits this project well:
 
 - Python 3.9+ (3.11+ recommended)
 - OCR dependencies from `requirements.txt` (`paddleocr` + `paddlepaddle`)
+- Optional offline post-correction: `pyspellchecker` (installed via `requirements.txt`)
+
+## Offline post-OCR spell correction (optional)
+
+If your OCR output has many accent mistakes (for example `idee` instead of `idée`),
+you can enable an offline dictionary-based correction pass after OCR.
+
+Environment flags:
+
+```bash
+export OCR_POST_SPELLCHECK=1
+export OCR_POST_SPELLCHECK_LANG=fr
+```
+
+Notes:
+
+- Correction runs after PaddleOCR text extraction.
+- It is best-effort: if spellchecker is unavailable, OCR still works.
+- Start with French (`fr`) for accent-heavy books.
 
 ## Project layout
 
@@ -579,6 +598,35 @@ capture-app/.venv/bin/python scripts/add_play_icon_overlay.py \
   --input resources/imgs/capture-app-cover.png \
   --output resources/imgs/capture-app-cover.png
 ```
+
+- Initialize a book-specific OCR training workspace (folders + split manifests):
+
+```bash
+cd "[PROJECT DIR]"
+python scripts/setup_ocr_training_workspace.py --workspace ocr-training --sample-pages 80
+```
+
+- Compute CER/WER from OCR predictions vs corrected references:
+
+```bash
+cd "[PROJECT DIR]"
+python scripts/evaluate_ocr_metrics.py \
+  --pred-dir ocr-training/eval/baseline/pred \
+  --ref-dir ocr-training/eval/baseline/ref \
+  --output-json ocr-training/eval/baseline/report.json
+```
+
+- Run offline spell correction on `.txt` files (preview first):
+
+```bash
+cd "[PROJECT DIR]"
+python scripts/offline_spellcheck_texts.py --input-dir images --language fr --dry-run
+python scripts/offline_spellcheck_texts.py --input-dir images --language fr
+```
+
+- Training process docs and release checklist:
+  - `docs/ocr_training_playbook.md`
+  - `docs/ocr_training_go_no_go_checklist.md`
 
 ## Privacy & Publishing
 

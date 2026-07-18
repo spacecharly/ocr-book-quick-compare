@@ -3,5 +3,6 @@ Pillow>=11,<12
 numpy<2
 paddleocr>=2.7.0,<2.8
 vosk>=0.3.44,<0.4
+pyspellchecker>=0.8,<0.9
 
 

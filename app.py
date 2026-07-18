@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -14,6 +15,13 @@ from typing import Iterable, Optional
 
 from flask import Flask, flash, jsonify, redirect, render_template, request, send_file, send_from_directory, url_for
 from PIL import Image
+
+try:
+    from spellchecker import SpellChecker
+    SPELLCHECK_IMPORT_ERROR = ""
+except Exception as exc:
+    SpellChecker = None
+    SPELLCHECK_IMPORT_ERROR = str(exc)
 
 try:
     from paddleocr import PaddleOCR
@@ -40,6 +48,8 @@ LANGUAGE_LABELS = {
     "it": "Italiano",
     "de": "Deutsch",
 }
+
+OCR_TOKEN_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’-][A-Za-zÀ-ÖØ-öø-ÿ]+)*")
 
 TRANSLATIONS = {
     "fr": {
@@ -830,7 +840,14 @@ def create_missing_text_files(images_dir: Path) -> list[Path]:
 
 
 
-def save_uploaded_images(files: list, images_dir: Path, auto_ocr: bool = False, ocr_lang: str = "eng") -> tuple[int, int, list]:
+def save_uploaded_images(
+    files: list,
+    images_dir: Path,
+    auto_ocr: bool = False,
+    ocr_lang: str = "eng",
+    spellcheck_enabled: bool = False,
+    spellcheck_lang: str = "",
+) -> tuple[int, int, list]:
     created_count = 0
     skipped_count = 0
     created_images: list = []
@@ -860,7 +877,12 @@ def save_uploaded_images(files: list, images_dir: Path, auto_ocr: bool = False, 
     if auto_ocr and created_images:
         for image_path, text_path in created_images:
             try:
-                extracted_text = run_ocr_for_image(image_path, ocr_lang)
+                extracted_text = run_ocr_for_image(
+                    image_path,
+                    ocr_lang,
+                    spellcheck_enabled=spellcheck_enabled,
+                    spellcheck_lang=spellcheck_lang,
+                )
                 text_path.write_text(extracted_text, encoding="utf-8")
             except RuntimeError:
                 text_path.write_text("", encoding="utf-8")
@@ -1030,6 +1052,50 @@ def _paddle_language_code(language: str) -> str:
     return "en"
 
 
+def _preserve_token_case(original: str, corrected: str) -> str:
+    if original.isupper():
+        return corrected.upper()
+    if original[:1].isupper():
+        return corrected[:1].upper() + corrected[1:]
+    return corrected
+
+
+@lru_cache(maxsize=4)
+def get_offline_spellchecker(language: str):
+    if SpellChecker is None:
+        error_suffix = f" ({SPELLCHECK_IMPORT_ERROR})" if SPELLCHECK_IMPORT_ERROR else ""
+        raise RuntimeError(
+            "Offline spellchecker is not installed or failed to import. "
+            f"Install/fix pyspellchecker dependencies to enable this feature{error_suffix}."
+        )
+
+    return SpellChecker(language=_paddle_language_code(language), distance=1)
+
+
+def apply_offline_spellcheck(text: str, language: str) -> str:
+    if not text:
+        return text
+
+    checker = get_offline_spellchecker(language)
+
+    def _replace(match) -> str:
+        token = match.group(0)
+        if len(token) <= 2 or token.isupper():
+            return token
+
+        lowered = token.casefold()
+        if lowered not in checker.unknown([lowered]):
+            return token
+
+        suggestion = checker.correction(lowered)
+        if not suggestion or suggestion == lowered:
+            return token
+
+        return _preserve_token_case(token, suggestion)
+
+    return OCR_TOKEN_PATTERN.sub(_replace, text)
+
+
 @lru_cache(maxsize=4)
 def get_paddle_ocr(language: str):
     if PaddleOCR is None:
@@ -1094,7 +1160,13 @@ def extract_text_from_paddle_result(result) -> str:
     return "\n".join(line for line in lines if line)
 
 
-def run_ocr_for_image(image_path: Path, language: str) -> str:
+def run_ocr_for_image(
+    image_path: Path,
+    language: str,
+    *,
+    spellcheck_enabled: bool = False,
+    spellcheck_lang: str = "",
+) -> str:
     try:
         ocr = get_paddle_ocr(language)
         extracted_text = ""
@@ -1106,6 +1178,14 @@ def run_ocr_for_image(image_path: Path, language: str) -> str:
         if not extracted_text and hasattr(ocr, "ocr"):
             legacy_result = ocr.ocr(str(image_path))
             extracted_text = extract_text_from_paddle_result(legacy_result)
+
+        if extracted_text and spellcheck_enabled:
+            language_for_spellcheck = (spellcheck_lang or language or "").strip()
+            try:
+                extracted_text = apply_offline_spellcheck(extracted_text, language_for_spellcheck)
+            except RuntimeError:
+                # Best effort: keep OCR result even if spellchecker is unavailable.
+                pass
 
         return extracted_text
     except Exception as exc:
@@ -1161,6 +1241,8 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         WORKING_FOLDER_STATE_FILE=base_dir / ".working-folder.txt",
         OCR_LANG=os.environ.get("OCR_LANG", ""),
         AUTO_OCR=os.environ.get("AUTO_OCR", "0").lower() in ("1", "true", "yes"),
+        OCR_POST_SPELLCHECK=os.environ.get("OCR_POST_SPELLCHECK", "0").lower() in ("1", "true", "yes"),
+        OCR_POST_SPELLCHECK_LANG=os.environ.get("OCR_POST_SPELLCHECK_LANG", "").strip(),
         MAX_CONTENT_LENGTH=64 * 1024 * 1024,
         AUTOSAVE_INTERVAL_MS=1500,
         CAPTURE_VOSK_MODEL_DIR=base_dir / "capture-app" / "models" / "vosk-model-small-en-us-0.15",
@@ -1307,7 +1389,12 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
         auto_ocr = request.form.get("auto_ocr") == "1"
         effective_ocr_lang = resolve_ocr_lang(view_state, app.config["OCR_LANG"])
         created_count, skipped_count, _ = save_uploaded_images(
-            uploaded_files, app.config["IMAGES_DIR"], auto_ocr=auto_ocr, ocr_lang=effective_ocr_lang
+            uploaded_files,
+            app.config["IMAGES_DIR"],
+            auto_ocr=auto_ocr,
+            ocr_lang=effective_ocr_lang,
+            spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
+            spellcheck_lang=app.config["OCR_POST_SPELLCHECK_LANG"],
         )
 
         if created_count:
@@ -1469,7 +1556,12 @@ def create_app(test_config: Optional[dict] = None) -> Flask:
 
         effective_ocr_lang = resolve_ocr_lang(view_state, app.config["OCR_LANG"])
         try:
-            extracted_text = run_ocr_for_image(current_record.image_path, effective_ocr_lang)
+            extracted_text = run_ocr_for_image(
+                current_record.image_path,
+                effective_ocr_lang,
+                spellcheck_enabled=app.config["OCR_POST_SPELLCHECK"],
+                spellcheck_lang=app.config["OCR_POST_SPELLCHECK_LANG"],
+            )
         except RuntimeError as exc:
             flash(str(exc), "error")
             return redirect_to_index(view_state, current_record.image_name)

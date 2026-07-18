@@ -1,6 +1,6 @@
 <div align="center">
 
-# OCR Book Quick Compare v5
+# OCR Book Quick Compare v6
 
 <p>
   <a href="https://youtu.be/8RaAw9v7SG8">
@@ -40,7 +40,13 @@ Small local web app to compare scanned book page images with their OCR text, edi
 
 </div>
 
-## v5 Features (New!)
+## v6 Features (Latest)
+
+- **Offline post-OCR spell correction**: Optional `pyspellchecker` pass after OCR with visible ON/OFF switch
+- **GUI workflow improvements**: OCR tools moved under **OCR Text** for faster editing loops (OCR language, spellcheck switch, post-validation downsize controls)
+- **Custom OCR training foundations**: Added scripts and docs for dataset setup, CER/WER evaluation, and go/no-go validation before fine-tuning
+
+## v5 Features
 
 - **Browser-based Capture Companion App**: Live camera preview, browser media APIs, auto image split for two-page mode
 - **Shared Working Folder**: Unified folder between OCR app and capture app for seamless workflow
@@ -112,7 +118,7 @@ you can enable an offline dictionary-based correction pass after OCR.
 
 From the UI:
 
-- Enable **Post-correction orthographique** in the top toolbar.
+- Enable **Post-correction orthographique** in the OCR tools area (under **OCR Text**).
 - Click **Paddle OCR** to run OCR with post-correction.
 
 Environment flag (global default):

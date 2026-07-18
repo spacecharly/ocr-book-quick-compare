@@ -54,7 +54,7 @@ OCR_TOKEN_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’-][A-Za-zÀ-Ö�
 TRANSLATIONS = {
     "fr": {
         "title": "OCR Book Quick Compare",
-        "subtitle": "v4 - Correction mise en page",
+        "subtitle": "v6",
         "dropzone_title": "Déposer images ici",
         "dropzone_hint": "ou cliquer pour sélectionner",
         "auto_ocr": "OCR auto",
@@ -176,7 +176,7 @@ TRANSLATIONS = {
     },
     "en": {
         "title": "OCR Book Quick Compare",
-        "subtitle": "v5",
+        "subtitle": "v6",
         "dropzone_title": "Drop images here",
         "dropzone_hint": "or click to select",
         "auto_ocr": "Auto OCR",
@@ -298,7 +298,7 @@ TRANSLATIONS = {
     },
     "it": {
         "title": "OCR Book Quick Compare",
-        "subtitle": "v4 - Correzione layout",
+        "subtitle": "v6",
         "dropzone_title": "Trascina qui le immagini",
         "dropzone_hint": "oppure clicca per selezionare",
         "auto_ocr": "OCR automatico",
@@ -420,7 +420,7 @@ TRANSLATIONS = {
     },
     "de": {
         "title": "OCR Book Quick Compare",
-        "subtitle": "v4 - Layout-Korrektur",
+        "subtitle": "v6",
         "dropzone_title": "Bilder hier ablegen",
         "dropzone_hint": "oder klicken zum Auswählen",
         "auto_ocr": "Auto OCR",

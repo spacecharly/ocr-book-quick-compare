@@ -1,6 +1,6 @@
 <div align="center">
 
-# Book Digitizer Suite v6.1.1
+# Book Digitizer Suite v6.1.2
 
 <p>
   <a href="https://youtu.be/8RaAw9v7SG8">
@@ -40,7 +40,13 @@ Small local web app to digitize and validate scanned book pages with OCR, paired
 
 </div>
 
-## v6.1.1 Hotfix (Latest)
+## v6.1.2 Release (Latest)
+
+- **Project rebranding**: Renamed from "OCR Book Quick Compare" to "Book Digitizer Suite" for better clarity on the complete end-to-end solution
+- **Architecture documentation**: Added comprehensive `ARCHITECTURE.md` covering system design, components, routes, workflows, and deployment
+- **Updated README**: Improved description and Docker quick-start path
+
+## v6.1.1 Hotfix
 
 - **Autosave regression fix**: Restored the OCR form wiring required by frontend autosave (`id="save-form"` and view state data attributes)
 - **Regression protection**: Added a dedicated test to ensure autosave-critical HTML attributes stay present after UI refactors

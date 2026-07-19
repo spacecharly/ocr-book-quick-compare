@@ -1,6 +1,6 @@
 <div align="center">
 
-# OCR Book Quick Compare v6.1.1
+# Book Digitizer Suite v6.1.1
 
 <p>
   <a href="https://youtu.be/8RaAw9v7SG8">
@@ -36,7 +36,7 @@
   <img alt="Languages" src="https://img.shields.io/badge/UI-FR%20%7C%20EN%20%7C%20IT%20%7C%20DE-6A5ACD" />
 </p>
 
-Small local web app to compare scanned book page images with their OCR text, edit the text, and validate each page, now paired with a companion capture app for live page photography.
+Small local web app to digitize and validate scanned book pages with OCR, paired with a companion browser-based capture app for live page photography. Complete end-to-end book digitization workflow.
 
 </div>
 
@@ -239,7 +239,7 @@ docker-compose logs -f
 - **One-command start from anywhere**:
 
 ```bash
-cd /path/to/ocr-book-quick-compare
+cd /path/to/bookdigitizer-suite
 docker-compose up
 ```
 

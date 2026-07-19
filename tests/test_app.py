@@ -119,6 +119,21 @@ class OCRCompareAppTests(unittest.TestCase):
         self.assertEqual(response_on.status_code, 200)
         self.assertIn('name="spellcheck_enabled" value="1" onchange="this.form.submit()" checked', html_on)
 
+    def test_ocr_form_keeps_autosave_wiring_attributes(self) -> None:
+        image_path = self.create_image("page-autosave-wiring.jpg", 100)
+        image_path.with_suffix(".txt").write_text("texte", encoding="utf-8")
+
+        response = self.client.get("/")
+        html = response.get_data(as_text=True)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('id="save-form"', html)
+        self.assertIn('data-autosave-url="/autosave"', html)
+        self.assertIn('data-current-image', html)
+        self.assertIn('data-view-sort', html)
+        self.assertIn('data-view-text-filter', html)
+        self.assertIn('data-view-query', html)
+
     def test_save_updates_selected_text_file(self) -> None:
         image_path = self.create_image("page-save.jpg", 100)
         text_path = image_path.with_suffix(".txt")

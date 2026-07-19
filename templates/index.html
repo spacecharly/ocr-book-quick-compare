@@ -261,12 +261,12 @@
                         </div>
                     </div>
                 </form>
-                <form class="text-form" action="{{ url_for('save_text') }}" method="post" data-autosave-url="{{ url_for('autosave_text') }}" data-autosave-interval="1500">
+                <form id="save-form" class="text-form" action="{{ url_for('save_text') }}" method="post" data-autosave-url="{{ url_for('autosave_text') }}" data-autosave-interval="1500">
                     <input type="hidden" name="current_image" value="{{ current_image_name }}" data-current-image>
-                    <input type="hidden" name="sort" value="{{ view_state.sort_key }}">
-                    <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}">
+                    <input type="hidden" name="sort" value="{{ view_state.sort_key }}" data-view-sort>
+                    <input type="hidden" name="text_filter" value="{{ view_state.text_filter }}" data-view-text-filter>
                     <input type="hidden" name="thumb_page" value="{{ view_state.thumbnail_page }}">
-                    <input type="hidden" name="q" value="{{ view_state.query }}">
+                    <input type="hidden" name="q" value="{{ view_state.query }}" data-view-query>
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
                     <input type="hidden" name="spellcheck_enabled" value="{{ '1' if effective_spellcheck_enabled else '' }}">

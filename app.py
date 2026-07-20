@@ -53,7 +53,7 @@ OCR_TOKEN_PATTERN = re.compile(r"[A-Za-zÀ-ÖØ-öø-ÿ]+(?:['’-][A-Za-zÀ-Ö�
 
 TRANSLATIONS = {
     "fr": {
-        "title": "OCR Book Quick Compare",
+        "title": "Book Digitizer Suite",
         "subtitle": "v6",
         "dropzone_title": "Déposer images ici",
         "dropzone_hint": "ou cliquer pour sélectionner",
@@ -99,7 +99,7 @@ TRANSLATIONS = {
         "flash_working_folder_picker_failed": "Impossible d'ouvrir le sélecteur Finder: {error}",
         "capture_title": "Capture App",
         "capture_subtitle": "Prise de vue depuis le navigateur avec sélection caméra, voix et découpe 2 pages.",
-        "capture_back": "Retour à OCR Book Quick Compare",
+        "capture_back": "Retour à \"Analyse des pages scannées\"",
         "capture_enable_camera": "Activer la caméra",
         "capture_refresh_cameras": "Rafraîchir les caméras",
         "capture_camera": "Caméra",
@@ -181,7 +181,7 @@ TRANSLATIONS = {
         "autosave_badge": "Autosave ON",
     },
     "en": {
-        "title": "OCR Book Quick Compare",
+        "title": "Book Digitizer Suite",
         "subtitle": "v6",
         "dropzone_title": "Drop images here",
         "dropzone_hint": "or click to select",
@@ -227,7 +227,7 @@ TRANSLATIONS = {
         "flash_working_folder_picker_failed": "Could not open Finder folder picker: {error}",
         "capture_title": "Capture App",
         "capture_subtitle": "Browser-based capture with camera selection, voice trigger, and 2-page split.",
-        "capture_back": "Back to OCR Book Quick Compare",
+        "capture_back": "Back to \"Scanned pages review\"",
         "capture_enable_camera": "Enable camera",
         "capture_refresh_cameras": "Refresh cameras",
         "capture_camera": "Camera",
@@ -309,7 +309,7 @@ TRANSLATIONS = {
         "autosave_badge": "Autosave ON",
     },
     "it": {
-        "title": "OCR Book Quick Compare",
+        "title": "Book Digitizer Suite",
         "subtitle": "v6",
         "dropzone_title": "Trascina qui le immagini",
         "dropzone_hint": "oppure clicca per selezionare",
@@ -355,7 +355,7 @@ TRANSLATIONS = {
         "flash_working_folder_picker_failed": "Impossibile aprire il selettore Finder: {error}",
         "capture_title": "Capture App",
         "capture_subtitle": "Acquisizione nel browser con selezione camera, trigger vocale e separazione 2 pagine.",
-        "capture_back": "Torna a OCR Book Quick Compare",
+        "capture_back": "Torna a \"Revisione delle pagine scansionate\"",
         "capture_enable_camera": "Attiva la camera",
         "capture_refresh_cameras": "Aggiorna camere",
         "capture_camera": "Camera",
@@ -437,7 +437,7 @@ TRANSLATIONS = {
         "autosave_badge": "Autosave ON",
     },
     "de": {
-        "title": "OCR Book Quick Compare",
+        "title": "Book Digitizer Suite",
         "subtitle": "v6",
         "dropzone_title": "Bilder hier ablegen",
         "dropzone_hint": "oder klicken zum Auswählen",
@@ -483,7 +483,7 @@ TRANSLATIONS = {
         "flash_working_folder_picker_failed": "Finder-Ordnerdialog konnte nicht geöffnet werden: {error}",
         "capture_title": "Capture App",
         "capture_subtitle": "Browserbasierte Aufnahme mit Kameraauswahl, Sprach-Trigger und 2-Seiten-Trennung.",
-        "capture_back": "Zurück zu OCR Book Quick Compare",
+        "capture_back": "Zurück zur \"Überprüfung der gescannten Seiten\"",
         "capture_enable_camera": "Kamera aktivieren",
         "capture_refresh_cameras": "Kameras aktualisieren",
         "capture_camera": "Kamera",

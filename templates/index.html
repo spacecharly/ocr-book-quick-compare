@@ -49,6 +49,7 @@
                 <button type="submit" class="secondary">{{ t('apply_working_folder') }}</button>
             </form>
             <div class="actions">
+                <a href="{{ url_for('capture_companion', lang=current_lang) }}" class="button-link" style="background-color: #0066cc; color: white; padding: 8px 16px; border-radius: 4px; display: inline-block; text-decoration: none;" target="_blank" rel="noopener">{{ t('launch_capture_app') }}</a>
                 <form action="{{ url_for('create_texts') }}" method="post">
                     <input type="hidden" name="lang" value="{{ current_lang }}">
                     <input type="hidden" name="ocr_lang" value="{{ view_state.ocr_lang }}">
@@ -57,7 +58,6 @@
                     <input type="hidden" name="downsize_kb" value="{{ view_state.downsize_kb }}">
                     <button type="submit" class="secondary">{{ t('create_txt') }}</button>
                 </form>
-                <a href="{{ url_for('capture_companion', lang=current_lang) }}" class="button-link" target="_blank" rel="noopener">{{ t('launch_capture_app') }}</a>
                 <a href="{{ url_for('export_texts') }}" class="button-link">{{ t('export') }}</a>
                 {% if done_count > 0 %}
                 <form action="{{ url_for('undo_validation') }}" method="post">

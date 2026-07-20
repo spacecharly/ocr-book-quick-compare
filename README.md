@@ -40,7 +40,13 @@ Small local web app to digitize and validate scanned book pages with OCR, paired
 
 </div>
 
-## v6.1.2 Release (Latest)
+## v6.1.3 Release (Latest)
+
+- **UI refinements**: Updated GitHub repository link to `https://github.com/spacecharly/bookdigitizer-suite`
+- **Blue button styling**: Capture App button now highlighted in blue for better visibility and moved to first position in the toolbar
+- **Improved navigation**: Capture App back button now displays "Back to 'Scanned pages review'" with blue styling for consistency
+
+## v6.1.2 Release
 
 - **Project rebranding**: Renamed from "OCR Book Quick Compare" to "Book Digitizer Suite" for better clarity on the complete end-to-end solution
 - **Architecture documentation**: Added comprehensive `ARCHITECTURE.md` covering system design, components, routes, workflows, and deployment
@@ -325,7 +331,7 @@ http://127.0.0.1:5001
 
 ### 2) Open the companion capture app
 
-From the `OCR Book Quick Compare` interface, click **Open Capture App** in the top toolbar.
+From the `Book Digitizer Suite` interface, click **Open Capture App** in the top toolbar.
 
 The companion app opens in a **new browser tab**.
 

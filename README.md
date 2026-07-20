@@ -1,29 +1,15 @@
 <div align="center">
 
-# Book Digitizer Suite v6.1.2
+# Book Digitizer Suite
 
 <p>
-  <a href="https://youtu.be/8RaAw9v7SG8">
-    <img src="resources/imgs/youtube-demo-thumbnail-play.png" alt="Watch the OCR Book Quick Compare introduction video on YouTube" width="400" />
+  <a href="https://youtu.be/DWa3ya7aKg0">
+    <img src="resources/imgs/book-digitizer-suite-demo-play.jpeg" alt="Watch the Book Digitizer Suite demo video on YouTube" width="400" />
   </a>
 </p>
 
 <p>
-  <a href="https://youtu.be/8RaAw9v7SG8"><strong>▶ Watch the 8-minutes introduction video on YouTube</strong></a>
-</p>
-
-<p>
-  <a href="https://youtu.be/DMKcqhTXROw">
-    <img src="resources/imgs/capture-app-cover.png" alt="Watch the Capture Companion App demo video on YouTube" width="400" />
-  </a>
-</p>
-
-<p>
-  <a href="https://youtu.be/DMKcqhTXROw"><strong>▶ Watch the Capture Companion App demo on YouTube</strong></a>
-</p>
-
-<p>
-  Quick demo of the browser-based companion capture app: live camera preview, one-page/two-page capture, rotation, fullscreen scan mode, and instant save to your OCR working folder.
+  <a href="https://youtu.be/DWa3ya7aKg0"><strong>▶ Watch the Book Digitizer Suite demo on YouTube</strong></a>
 </p>
 
 <p>
@@ -36,11 +22,18 @@
   <img alt="Languages" src="https://img.shields.io/badge/UI-FR%20%7C%20EN%20%7C%20IT%20%7C%20DE-6A5ACD" />
 </p>
 
-Small local web app to digitize and validate scanned book pages with OCR, paired with a companion browser-based capture app for live page photography. Complete end-to-end book digitization workflow.
+All-in-one local solution for book digitization: scan/capture pages, OCR extraction, human validation, and export-ready cleaned texts.
 
 </div>
 
-## v6.1.3 Release (Latest)
+## v6.2 Release (Latest)
+
+- **New demo video**: Replaced both previous video sections with a single unified demo video ([Watch on YouTube](https://youtu.be/DWa3ya7aKg0))
+- **Cleaner header**: Title no longer includes the version number; description updated to reflect the full end-to-end scope of the suite
+- **Updated cover image**: New `book-digitizer-suite-demo-play.jpeg` thumbnail with YouTube-style play icon overlay
+- **Script fix**: `scripts/add_play_icon_overlay.py` now correctly handles JPEG output (flattens RGBA to RGB with white background)
+
+## v6.1.3 Release
 
 - **UI refinements**: Updated GitHub repository link to `https://github.com/spacecharly/bookdigitizer-suite`
 - **Blue button styling**: Capture App button now highlighted in blue for better visibility and moved to first position in the toolbar

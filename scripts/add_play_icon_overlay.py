@@ -82,6 +82,11 @@ def main() -> int:
     with Image.open(input_path) as src:
         out = draw_play_overlay(src, width_ratio=args.width_ratio)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        # JPEG does not support alpha: flatten on white background if needed.
+        if output_path.suffix.lower() in (".jpg", ".jpeg") and out.mode == "RGBA":
+            flat = Image.new("RGB", out.size, (255, 255, 255))
+            flat.paste(out, mask=out.getchannel("A"))
+            out = flat
         out.save(output_path)
 
     print(f"Play icon overlay added: {output_path}")
